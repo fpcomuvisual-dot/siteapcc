@@ -4,7 +4,8 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Instagram, Facebook, Newspaper, ArrowRight, MapPin, Clock } from "lucide-react";
+import { Calendar, Facebook, Newspaper, ArrowRight, MapPin, Clock } from "lucide-react";
+import InstagramFeed from "./InstagramFeed";
 
 // Mock data - substituir por API real
 const noticias = [
@@ -31,6 +32,22 @@ const noticias = [
         data: "2024-11-20",
         imagem: "/news-3.jpg",
         categoria: "Depoimento"
+    },
+    {
+        id: 4,
+        titulo: "Bazar Beneficente bate recorde de arrecadação",
+        resumo: "Graças à solidariedade de todos, conseguimos fundos para novos equipamentos.",
+        data: "2024-12-05",
+        imagem: "/news-4.jpg",
+        categoria: "Evento"
+    },
+    {
+        id: 5,
+        titulo: "Equipe médica recebe prêmio de excelência",
+        resumo: "Nossos profissionais foram reconhecidos pelo atendimento humanizado.",
+        data: "2024-12-10",
+        imagem: "/news-5.jpg",
+        categoria: "Institucional"
     }
 ];
 
@@ -68,7 +85,7 @@ const fadeInUp = {
 
 export default function NoticiasEventos() {
     return (
-        <div className="bg-slate-50 py-24">
+        <div className="bg-slate-50 py-12 md:py-16">
             <div className="container mx-auto px-4">
 
                 {/* Redes Sociais - PRIMEIRO */}
@@ -78,7 +95,7 @@ export default function NoticiasEventos() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.6 }}
                     variants={fadeInUp}
-                    className="mb-24"
+                    className="mb-12 md:mb-16"
                 >
                     <div className="text-center mb-12">
                         <h2 className="text-5xl font-black text-gray-900 mb-4">
@@ -93,40 +110,7 @@ export default function NoticiasEventos() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {/* Instagram Feed */}
-                        <Card className="bg-white border-rosa-100 shadow-lg shadow-gray-100">
-                            <CardHeader>
-                                <CardTitle className="text-gray-900 flex items-center gap-2">
-                                    <Instagram className="h-6 w-6 text-pink-500" />
-                                    Instagram
-                                </CardTitle>
-                                <CardDescription className="text-gray-600">
-                                    @apcc_oficial
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                                        <div
-                                            key={i}
-                                            className="aspect-square bg-gradient-to-br from-pink-900/20 to-purple-900/20 rounded-lg hover:scale-105 transition-transform cursor-pointer"
-                                        >
-                                            <div className="w-full h-full flex items-center justify-center">
-                                                <Instagram className="h-8 w-8 text-pink-500/50" />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <Button
-                                    className="w-full mt-4 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700"
-                                    asChild
-                                >
-                                    <a href="https://instagram.com/apcc_oficial" target="_blank" rel="noopener noreferrer">
-                                        <Instagram className="mr-2 h-4 w-4" />
-                                        Seguir no Instagram
-                                    </a>
-                                </Button>
-                            </CardContent>
-                        </Card>
+                        <InstagramFeed />
 
                         {/* Facebook Feed */}
                         <Card className="bg-white border-azul-100 shadow-lg shadow-gray-100">
@@ -181,7 +165,7 @@ export default function NoticiasEventos() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.6, delay: 0.2 }}
                     variants={fadeInUp}
-                    className="mb-24"
+                    className="mb-12 md:mb-16"
                 >
                     <div className="text-center mb-12">
                         <h2 className="text-5xl font-black text-gray-900 mb-4">

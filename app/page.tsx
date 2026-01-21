@@ -106,15 +106,15 @@ export default function Home() {
                         quality={90}
                     />
                     {/* Dark Overlay with Rosa/Azul Gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/80 to-white/95" />
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-white/50 to-white/90" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/75 via-white/50 to-white/75" />
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-white/30 to-white/80" />
                     {/* Grid Pattern */}
                     <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDAsIDAsIDAsIDAuMDMpIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-60" />
                 </motion.div>
 
                 {/* Content */}
                 <motion.div
-                    className="container mx-auto px-4 py-20 relative z-10"
+                    className="container mx-auto px-4 py-12 md:py-20 relative z-10"
                     style={{ opacity }}
                 >
                     <motion.div
@@ -201,7 +201,7 @@ export default function Home() {
             <NoticiasEventos />
 
             {/* Impact Section - NOSSOS NÚMEROS */}
-            <section className="bg-slate-50 py-24">
+            <section className="bg-slate-50 py-12 md:py-16">
                 <div className="container mx-auto px-4">
                     <motion.div
                         className="text-center mb-16"
@@ -325,7 +325,7 @@ export default function Home() {
             </section>
 
             {/* Call to Action */}
-            <section className="bg-slate-50 py-24">
+            <section className="bg-slate-50 py-12 md:py-16">
                 <div className="container mx-auto px-4">
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}

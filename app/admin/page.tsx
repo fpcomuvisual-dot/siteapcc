@@ -1,285 +1,340 @@
-"use client";
-
-import { useState } from "react";
-import Link from "next/link";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+'use client'
+import { useState } from 'react'
+import { analyzeDocument, saveSettings } from './actions'
 import {
-    Heart,
-    Home,
-    FileText,
     BarChart3,
-    Image as ImageIcon,
-    Save,
-    Eye,
-    Settings
-} from "lucide-react";
+    FileText,
+    Users,
+    DollarSign,
+    TrendingUp,
+    Upload,
+    Bot,
+    CheckCircle2,
+    LayoutDashboard,
+    Settings,
+    Sparkles,
+    Search,
+    Menu
+} from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import InstagramFeed from '@/components/features/InstagramFeed'
 
 export default function AdminDashboard() {
-    // Estados para edição
-    const [stats, setStats] = useState({
-        pacientes: "1.247",
-        sessoes: "3.892",
-        investimento: "R$ 2.1M",
-        sucesso: "89%"
-    });
+    const [analyzing, setAnalyzing] = useState(false)
+    const [analysisResult, setAnalysisResult] = useState<any>(null)
+    const [activeTab, setActiveTab] = useState('dashboard')
 
-    const [heroText, setHeroText] = useState({
-        titulo: "Juntos Salvamos Vidas",
-        subtitulo: "A APCC oferece apoio, tratamento e esperança para quem enfrenta o câncer."
-    });
+    async function handleAnalyze(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault()
+        setAnalyzing(true)
+        setAnalysisResult(null)
 
-    const [saved, setSaved] = useState(false);
+        const formData = new FormData(e.currentTarget)
+        const result = await analyzeDocument(formData)
 
-    const handleSave = () => {
-        // Aqui você conectaria com backend/database
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
-    };
+        setAnalyzing(false)
+        if (result.success) {
+            setAnalysisResult(result.data)
+        }
+    }
 
     return (
-        <div className="min-h-screen bg-gray-950">
-            {/* Header */}
-            <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-md sticky top-0 z-40">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                            <Heart className="h-8 w-8 text-rosa-500" />
-                            <span className="text-2xl font-bold bg-gradient-to-r from-rosa-400 to-azul-400 bg-clip-text text-transparent">
-                                APCC Admin
-                            </span>
+        <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans selection:bg-pink-500/30">
+
+            {/* Sidebar */}
+            <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col p-6 sticky top-0 h-screen shadow-sm">
+                <div className="flex items-center gap-3 mb-10 text-pink-600">
+                    <div className="w-8 h-8 rounded-lg bg-pink-50 flex items-center justify-center">
+                        <LayoutDashboard size={20} />
+                    </div>
+                    <span className="font-bold text-lg text-slate-900">APCC Admin</span>
+                </div>
+
+                <nav className="space-y-1 flex-1">
+                    <SidebarItem icon={BarChart3} label="Visão Geral" active />
+                    <SidebarItem icon={FileText} label="Documentos" />
+                    <SidebarItem icon={Users} label="Doadores" />
+                    <SidebarItem icon={Settings} label="Configurações" />
+                </nav>
+
+                <div className="mt-auto pt-6 border-t border-slate-100">
+                    <div className="bg-gradient-to-br from-pink-50 to-purple-50 p-4 rounded-xl border border-pink-100">
+                        <div className="flex items-center gap-2 text-pink-600 mb-2">
+                            <Sparkles size={16} />
+                            <span className="text-xs font-bold uppercase">Plano Pro</span>
                         </div>
-                        <div className="flex items-center gap-4">
-                            <Link href="/">
-                                <Button variant="outline" className="border-azul-500 text-azul-400 hover:bg-azul-500/10">
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    Ver Site
-                                </Button>
-                            </Link>
-                            <Button
-                                onClick={handleSave}
-                                className="bg-gradient-to-r from-rosa-600 to-azul-600 hover:from-rosa-700 hover:to-azul-700"
-                            >
-                                <Save className="mr-2 h-4 w-4" />
-                                {saved ? "Salvo! ✓" : "Salvar Tudo"}
-                            </Button>
-                        </div>
+                        <p className="text-xs text-slate-600 mb-3">Sua licença de uso da IA está ativa.</p>
+                        <Button size="sm" variant="secondary" className="w-full text-xs h-8 bg-white hover:bg-slate-50 text-slate-700 shadow-sm">
+                            Gerenciar
+                        </Button>
                     </div>
                 </div>
-            </header>
+            </aside>
 
-            <div className="container mx-auto px-4 py-8">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                    {/* Sidebar */}
-                    <div className="lg:col-span-1">
-                        <Card className="bg-gray-900 border-gray-800">
+            {/* Main Content */}
+            <main className="flex-1 p-8 overflow-y-auto">
+                <header className="flex justify-between items-center mb-8">
+                    <div className="md:hidden">
+                        <Button size="icon" variant="ghost">
+                            <Menu className="text-slate-500" />
+                        </Button>
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900 mb-1">Painel de Controle</h1>
+                        <p className="text-slate-500 text-sm">Bem-vindo de volta, Administrador.</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <Button variant="outline" className="border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-sm">
+                            Ver Site
+                        </Button>
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-md shadow-pink-200">
+                            A
+                        </div>
+                    </div>
+                </header>
+
+                {/* KPI Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <StatCard
+                        title="Pacientes Atendidos"
+                        value="1,248"
+                        trend="+12%"
+                        icon={Users}
+                        color="text-blue-600"
+                        bgColor="bg-blue-50"
+                        trendColor="text-blue-600 bg-blue-50"
+                    />
+                    <StatCard
+                        title="Investimento Social"
+                        value="R$ 45.2k"
+                        trend="+5%"
+                        icon={DollarSign}
+                        color="text-green-600"
+                        bgColor="bg-green-50"
+                        trendColor="text-green-600 bg-green-50"
+                    />
+                    <StatCard
+                        title="Taxa de Sucesso"
+                        value="98.5%"
+                        trend="+2%"
+                        icon={TrendingUp}
+                        color="text-pink-600"
+                        bgColor="bg-pink-50"
+                        trendColor="text-pink-600 bg-pink-50"
+                    />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Left Column - Main Forms */}
+                    <div className="lg:col-span-2 space-y-8">
+
+                        {/* Hero Editor */}
+                        <Card className="bg-white border-slate-200 shadow-sm">
                             <CardHeader>
-                                <CardTitle className="text-white">Menu</CardTitle>
+                                <CardTitle className="text-slate-900 flex items-center gap-2">
+                                    <span className="w-2 h-6 bg-pink-500 rounded-full" />
+                                    Hero Section
+                                </CardTitle>
+                                <CardDescription className="text-slate-500">
+                                    Personalize a mensagem principal do site.
+                                </CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-2">
-                                <Button variant="ghost" className="w-full justify-start text-rosa-400 hover:bg-rosa-500/10">
-                                    <Home className="mr-2 h-4 w-4" />
-                                    Página Inicial
-                                </Button>
-                                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:bg-gray-800">
-                                    <BarChart3 className="mr-2 h-4 w-4" />
-                                    Estatísticas
-                                </Button>
-                                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:bg-gray-800">
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    Documentos
-                                </Button>
-                                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:bg-gray-800">
-                                    <ImageIcon className="mr-2 h-4 w-4" />
-                                    Imagens
-                                </Button>
-                                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:bg-gray-800">
-                                    <Settings className="mr-2 h-4 w-4" />
-                                    Configurações
-                                </Button>
+                            <CardContent className="space-y-4">
+                                <div className="grid gap-2">
+                                    <Label className="text-slate-700">Título Principal</Label>
+                                    <Input
+                                        defaultValue="Juntos Salvamos Vidas"
+                                        className="bg-white border-slate-200 focus-visible:ring-pink-500 text-slate-900"
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label className="text-slate-700">Subtítulo</Label>
+                                    <Textarea
+                                        defaultValue="A APCC oferece apoio, tratamento e esperança para pacientes em combate ao câncer."
+                                        className="bg-white border-slate-200 focus-visible:ring-pink-500 text-slate-900 min-h-[80px]"
+                                    />
+                                </div>
+                                <div className="flex justify-end pt-2">
+                                    <Button className="bg-pink-600 hover:bg-pink-700 text-white font-medium shadow-md shadow-pink-200">
+                                        Salvar Alterações
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* AI Document Analysis */}
+                        <Card className="bg-white border-slate-200 overflow-hidden relative shadow-sm">
+                            <div className="absolute top-0 right-0 p-4 opacity-5">
+                                <Bot className="w-24 h-24 text-slate-900 -rotate-12" />
+                            </div>
+
+                            <CardHeader>
+                                <CardTitle className="text-slate-900 flex items-center gap-2">
+                                    <Sparkles className="text-pink-600 w-5 h-5" />
+                                    Inteligência Artificial Gemini
+                                </CardTitle>
+                                <CardDescription className="text-slate-500">
+                                    Upload de documentos para análise automática e geração de releases.
+                                </CardDescription>
+                            </CardHeader>
+
+                            <CardContent>
+                                <form onSubmit={handleAnalyze} className="space-y-6">
+                                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 transition-colors hover:border-pink-500/50 hover:bg-slate-50 group text-center cursor-pointer relative bg-slate-50/50">
+                                        <input type="file" name="docs" className="absolute inset-0 opacity-0 cursor-pointer" required />
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="w-12 h-12 rounded-full bg-white shadow-sm border border-slate-100 group-hover:border-pink-200 flex items-center justify-center transition-colors">
+                                                <Upload className="w-6 h-6 text-slate-400 group-hover:text-pink-500 transition-colors" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="font-medium text-slate-600 group-hover:text-slate-900">
+                                                    Clique ou arraste arquivos aqui
+                                                </p>
+                                                <p className="text-xs text-slate-400">PDF, DOCX até 5MB</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end">
+                                        <Button
+                                            type="submit"
+                                            disabled={analyzing}
+                                            className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white shadow-lg shadow-pink-200"
+                                        >
+                                            {analyzing ? (
+                                                <>
+                                                    <Sparkles className="mr-2 h-4 w-4 animate-spin" />
+                                                    Analisando com Gemini...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Bot className="mr-2 h-4 w-4" />
+                                                    Processar Documento
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </form>
+
+                                <AnimatePresence>
+                                    {analysisResult && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="mt-6 bg-slate-50 rounded-xl p-6 border border-pink-100 shadow-inner"
+                                        >
+                                            <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-200">
+                                                <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                                                    <CheckCircle2 className="text-green-500 w-5 h-5" />
+                                                    Análise Concluída
+                                                </h4>
+                                                <span className="text-xs font-mono text-slate-500 bg-white border border-slate-200 px-2 py-1 rounded">
+                                                    {analysisResult.date}
+                                                </span>
+                                            </div>
+
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assunto Identificado</label>
+                                                    <p className="text-slate-800 mt-1 font-medium">{analysisResult.subject}</p>
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-xs font-bold text-pink-600 uppercase tracking-wider flex items-center gap-1">
+                                                        <Sparkles className="w-3 h-3" />
+                                                        Release Gerado por IA
+                                                    </label>
+                                                    <div className="mt-2 bg-white p-4 rounded-lg text-slate-600 leading-relaxed border border-slate-200 text-sm shadow-sm">
+                                                        {analysisResult.release}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex justify-end gap-2 pt-2">
+                                                    <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900 hover:bg-slate-100">Descartar</Button>
+                                                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white shadow-md shadow-green-200">Aprovar e Publicar</Button>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </CardContent>
                         </Card>
                     </div>
 
-                    {/* Main Content */}
-                    <div className="lg:col-span-3 space-y-6">
-                        {/* Hero Section Editor */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5 }}
-                        >
-                            <Card className="bg-gray-900 border-gray-800">
-                                <CardHeader>
-                                    <CardTitle className="text-white flex items-center gap-2">
-                                        <Home className="h-5 w-5 text-rosa-500" />
-                                        Editar Hero Section
-                                    </CardTitle>
-                                    <CardDescription className="text-gray-400">
-                                        Texto principal da página inicial
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div>
-                                        <Label htmlFor="titulo" className="text-gray-300">Título Principal</Label>
-                                        <Input
-                                            id="titulo"
-                                            value={heroText.titulo}
-                                            onChange={(e) => setHeroText({ ...heroText, titulo: e.target.value })}
-                                            className="bg-gray-800 border-gray-700 text-white mt-2"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="subtitulo" className="text-gray-300">Subtítulo</Label>
-                                        <Input
-                                            id="subtitulo"
-                                            value={heroText.subtitulo}
-                                            onChange={(e) => setHeroText({ ...heroText, subtitulo: e.target.value })}
-                                            className="bg-gray-800 border-gray-700 text-white mt-2"
-                                        />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </motion.div>
+                    {/* Right Column - History & Recent */}
+                    <div className="space-y-8">
+                        <Card className="bg-white border-slate-200 shadow-sm">
+                            <CardHeader>
+                                <CardTitle className="text-slate-900 text-lg">Social Feed (Live)</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <InstagramFeed />
+                            </CardContent>
+                        </Card>
 
-                        {/* Statistics Editor */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.1 }}
-                        >
-                            <Card className="bg-gray-900 border-gray-800">
-                                <CardHeader>
-                                    <CardTitle className="text-white flex items-center gap-2">
-                                        <BarChart3 className="h-5 w-5 text-azul-500" />
-                                        Editar Estatísticas 2024
-                                    </CardTitle>
-                                    <CardDescription className="text-gray-400">
-                                        Números de impacto exibidos na página inicial
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <Label htmlFor="pacientes" className="text-gray-300">Pacientes Atendidos</Label>
-                                            <Input
-                                                id="pacientes"
-                                                value={stats.pacientes}
-                                                onChange={(e) => setStats({ ...stats, pacientes: e.target.value })}
-                                                className="bg-gray-800 border-gray-700 text-white mt-2"
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="sessoes" className="text-gray-300">Sessões de Tratamento</Label>
-                                            <Input
-                                                id="sessoes"
-                                                value={stats.sessoes}
-                                                onChange={(e) => setStats({ ...stats, sessoes: e.target.value })}
-                                                className="bg-gray-800 border-gray-700 text-white mt-2"
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="investimento" className="text-gray-300">Investimento</Label>
-                                            <Input
-                                                id="investimento"
-                                                value={stats.investimento}
-                                                onChange={(e) => setStats({ ...stats, investimento: e.target.value })}
-                                                className="bg-gray-800 border-gray-700 text-white mt-2"
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="sucesso" className="text-gray-300">Taxa de Sucesso</Label>
-                                            <Input
-                                                id="sucesso"
-                                                value={stats.sucesso}
-                                                onChange={(e) => setStats({ ...stats, sucesso: e.target.value })}
-                                                className="bg-gray-800 border-gray-700 text-white mt-2"
-                                            />
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-
-                        {/* Preview Cards */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
-                        >
-                            <Card className="bg-gray-900 border-gray-800">
-                                <CardHeader>
-                                    <CardTitle className="text-white flex items-center gap-2">
-                                        <Eye className="h-5 w-5 text-rosa-500" />
-                                        Preview
-                                    </CardTitle>
-                                    <CardDescription className="text-gray-400">
-                                        Visualização das alterações
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="bg-gray-800 rounded-lg p-8 text-center space-y-4">
-                                        <h2 className="text-4xl font-black bg-gradient-to-r from-rosa-400 to-azul-400 bg-clip-text text-transparent">
-                                            {heroText.titulo}
-                                        </h2>
-                                        <p className="text-gray-300 text-lg">
-                                            {heroText.subtitulo}
-                                        </p>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-                                            <div className="bg-gray-900 p-4 rounded-lg border border-rosa-500/30">
-                                                <div className="text-3xl font-black text-rosa-400">{stats.pacientes}</div>
-                                                <div className="text-xs text-gray-400 mt-1">Pacientes</div>
+                        <Card className="bg-white border-slate-200 shadow-sm h-full">
+                            <CardHeader>
+                                <CardTitle className="text-slate-900 text-lg">Histórico Recente</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    {[1, 2, 3].map((i) => (
+                                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group cursor-pointer border border-transparent hover:border-slate-100">
+                                            <div className="w-10 h-10 rounded bg-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-white group-hover:shadow-sm transition-all border border-transparent group-hover:border-slate-200">
+                                                <FileText className="w-5 h-5 text-slate-500 group-hover:text-pink-500" />
                                             </div>
-                                            <div className="bg-gray-900 p-4 rounded-lg border border-azul-500/30">
-                                                <div className="text-3xl font-black text-azul-400">{stats.sessoes}</div>
-                                                <div className="text-xs text-gray-400 mt-1">Sessões</div>
-                                            </div>
-                                            <div className="bg-gray-900 p-4 rounded-lg border border-rosa-500/30">
-                                                <div className="text-3xl font-black text-rosa-400">{stats.investimento}</div>
-                                                <div className="text-xs text-gray-400 mt-1">Investimento</div>
-                                            </div>
-                                            <div className="bg-gray-900 p-4 rounded-lg border border-azul-500/30">
-                                                <div className="text-3xl font-black text-azul-400">{stats.sucesso}</div>
-                                                <div className="text-xs text-gray-400 mt-1">Sucesso</div>
+                                            <div>
+                                                <p className="text-sm font-medium text-slate-700 group-hover:text-slate-900">Prestação de Contas Jul/{24}</p>
+                                                <p className="text-xs text-slate-500">Processado via Gemini AI</p>
                                             </div>
                                         </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-
-                        {/* Quick Actions */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.3 }}
-                        >
-                            <Card className="bg-gradient-to-r from-rosa-600 to-azul-600 border-0">
-                                <CardContent className="p-6">
-                                    <div className="flex items-center justify-between text-white">
-                                        <div>
-                                            <h3 className="text-lg font-bold mb-1">💡 Dica</h3>
-                                            <p className="text-sm opacity-90">
-                                                Clique em &quot;Salvar Tudo&quot; para aplicar as mudanças ao site
-                                            </p>
-                                        </div>
-                                        <Button
-                                            onClick={handleSave}
-                                            className="bg-white text-rosa-600 hover:bg-gray-100 font-bold"
-                                        >
-                                            <Save className="mr-2 h-4 w-4" />
-                                            Salvar
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </motion.div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
-    );
+    )
+}
+
+function SidebarItem({ icon: Icon, label, active = false }: { icon: any, label: string, active?: boolean }) {
+    return (
+        <a
+            href="#"
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-1
+                ${active
+                    ? 'bg-pink-50 text-pink-600 font-medium'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+        >
+            <Icon size={18} />
+            <span className="text-sm">{label}</span>
+        </a>
+    )
+}
+
+function StatCard({ title, value, trend, icon: Icon, color, bgColor, trendColor }: any) {
+    return (
+        <Card className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-all">
+            <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <div className={`p-2 rounded-lg ${bgColor}`}>
+                        <Icon className={`w-5 h-5 ${color}`} />
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${trendColor}`}>
+                        <TrendingUp className="w-3 h-3" /> {trend}
+                    </span>
+                </div>
+                <h3 className="text-2xl font-bold text-slate-900 mb-1">{value}</h3>
+                <p className="text-sm text-slate-500">{title}</p>
+            </CardContent>
+        </Card>
+    )
 }
