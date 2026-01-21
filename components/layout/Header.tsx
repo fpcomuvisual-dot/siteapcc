@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Heart, ShoppingBag, Lock } from "lucide-react";
-import { useState } from "react";
-import { LoginDialog } from "@/components/auth/LoginDialog";
+import { Menu, X } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
 
 export function Header() {
     const [isLoginOpen, setIsLoginOpen] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
     return (
         <>
@@ -20,7 +22,7 @@ export function Header() {
             >
                 <div className="container mx-auto px-4 py-4">
                     <div className="flex items-center justify-between">
-                        <Link href="/" className="flex items-center space-x-2">
+                        <Link href="/" className="flex items-center space-x-2 z-50 relative">
                             <motion.div
                                 whileHover={{ rotate: 360 }}
                                 transition={{ duration: 0.6 }}
@@ -31,21 +33,20 @@ export function Header() {
                                 APCC
                             </span>
                         </Link>
-                        <div className="flex items-center space-x-6">
+
+                        {/* Desktop Menu */}
+                        <div className="hidden md:flex items-center space-x-6">
                             <Link href="/" className="text-foreground/80 hover:text-primary transition-colors font-medium">
                                 Início
                             </Link>
                             <Link href="/transparencia" className="text-foreground/80 hover:text-primary transition-colors font-medium">
                                 Transparência
                             </Link>
-
-                            {/* Lojinha Link */}
                             <Link href="/lojinha" className="text-foreground/80 hover:text-primary transition-colors font-medium flex items-center gap-1">
                                 <ShoppingBag className="w-4 h-4" />
                                 Lojinha
                             </Link>
 
-                            {/* Dashboard / Login Button */}
                             <button
                                 onClick={() => setIsLoginOpen(true)}
                                 className="text-muted-foreground hover:text-foreground transition-colors font-medium flex items-center gap-1 text-sm"
@@ -62,8 +63,71 @@ export function Header() {
                                 </motion.div>
                             </Link>
                         </div>
+
+                        {/* Mobile Menu Button */}
+                        <div className="md:hidden z-50">
+                            <button onClick={toggleMenu} className="text-primary p-2">
+                                {isMenuOpen ? <X className="h-8 w-8" /> : <Menu className="h-8 w-8" />}
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                {/* Mobile Menu Overlay */}
+                <AnimatePresence>
+                    {isMenuOpen && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "100vh" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="fixed inset-0 bg-background/95 backdrop-blur-xl z-40 pt-24 px-6 md:hidden overflow-hidden"
+                        >
+                            <div className="flex flex-col space-y-6 text-2xl font-bold text-center">
+                                <Link
+                                    href="/"
+                                    className="text-foreground hover:text-primary transition-colors py-2"
+                                    onClick={toggleMenu}
+                                >
+                                    Início
+                                </Link>
+                                <Link
+                                    href="/transparencia"
+                                    className="text-foreground hover:text-primary transition-colors py-2"
+                                    onClick={toggleMenu}
+                                >
+                                    Transparência
+                                </Link>
+                                <Link
+                                    href="/lojinha"
+                                    className="text-foreground hover:text-primary transition-colors py-2 flex items-center justify-center gap-2"
+                                    onClick={toggleMenu}
+                                >
+                                    <ShoppingBag className="w-6 h-6" />
+                                    Lojinha
+                                </Link>
+
+                                <div className="pt-8 flex flex-col gap-4 w-full">
+                                    <button
+                                        onClick={() => {
+                                            setIsLoginOpen(true);
+                                            toggleMenu();
+                                        }}
+                                        className="text-muted-foreground hover:text-foreground transition-colors font-medium flex items-center justify-center gap-2 text-lg"
+                                    >
+                                        <Lock className="w-5 h-5" />
+                                        Área Restrita
+                                    </button>
+
+                                    <Link href="/doar" onClick={toggleMenu} className="w-full">
+                                        <Button className="w-full bg-primary hover:bg-primary/90 border-0 font-bold text-primary-foreground text-xl py-6 shadow-xl shadow-primary/20">
+                                            Doar Agora
+                                        </Button>
+                                    </Link>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </motion.nav>
 
             <LoginDialog open={isLoginOpen} onOpenChange={setIsLoginOpen} />
