@@ -1,0 +1,16 @@
+# robots.txt para APCC
+# Permitir todos os crawlers
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://apcc.org.br/sitemap.xml
+
+# Crawl-delay para bots mais agressivos
+User-agent: *
+Crawl-delay: 1
+
+# Bloquear admin
+User-agent: *
+Disallow: /admin
