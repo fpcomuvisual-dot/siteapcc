@@ -47,45 +47,6 @@ export default function Home() {
 
     return (
         <div className="min-h-screen bg-white">
-            {/* Navigation */}
-            <motion.nav
-                className="border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-40"
-                initial={{ y: -100 }}
-                animate={{ y: 0 }}
-                transition={{ duration: 0.5 }}
-            >
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <Link href="/" className="flex items-center space-x-2">
-                            <motion.div
-                                whileHover={{ rotate: 360 }}
-                                transition={{ duration: 0.6 }}
-                            >
-                                <Heart className="h-8 w-8 text-rosa-500" />
-                            </motion.div>
-                            <span className="text-2xl font-bold bg-gradient-to-r from-rosa-400 to-azul-400 bg-clip-text text-transparent">
-                                APCC
-                            </span>
-                        </Link>
-                        <div className="flex items-center space-x-6">
-                            <Link href="/" className="text-gray-600 hover:text-rosa-500 transition-colors font-medium">
-                                Início
-                            </Link>
-                            <Link href="/transparencia" className="text-gray-600 hover:text-azul-500 transition-colors font-medium">
-                                Transparência
-                            </Link>
-                            <Link href="/doar">
-                                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                    <Button className="bg-gradient-to-r from-rosa-600 to-azul-600 hover:from-rosa-700 hover:to-azul-700 border-0 font-bold">
-                                        Doar
-                                    </Button>
-                                </motion.div>
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </motion.nav>
-
             {/* Hero Section with Background */}
             <section
                 ref={heroRef}
@@ -139,20 +100,20 @@ export default function Home() {
                             className="text-5xl md:text-7xl lg:text-8xl font-black leading-tight text-center"
                             variants={fadeInUp}
                         >
-                            <span className="block text-gray-900 mb-2">
+                            <span className="block text-foreground mb-2">
                                 Juntos
                             </span>
-                            <span className="block bg-gradient-to-r from-rosa-500 via-rosa-400 to-azul-500 bg-clip-text text-transparent">
+                            <span className="block text-primary">
                                 Salvamos Vidas
                             </span>
                         </motion.h1>
 
                         {/* Subtitle */}
                         <motion.p
-                            className="text-xl md:text-2xl text-gray-600 leading-relaxed text-center max-w-3xl mx-auto"
+                            className="text-xl md:text-2xl text-muted-foreground leading-relaxed text-center max-w-3xl mx-auto"
                             variants={fadeInUp}
                         >
-                            A <strong className="text-rosa-500">APCC</strong> oferece apoio, tratamento e esperança
+                            A <strong className="text-primary">APCC</strong> oferece apoio, tratamento e esperança
                             para quem enfrenta o câncer. Somos uma família unida pela solidariedade. 💪
                         </motion.p>
 
@@ -163,7 +124,7 @@ export default function Home() {
                         >
                             <Link href="/doar">
                                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                    <Button size="lg" className="bg-gradient-to-r from-rosa-600 to-azul-600 hover:from-rosa-700 hover:to-azul-700 text-white text-lg px-10 py-7 font-bold shadow-2xl shadow-rosa-500/50">
+                                    <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-10 py-7 font-bold shadow-2xl shadow-primary/30">
                                         <Heart className="mr-2 h-6 w-6" />
                                         Faça uma Doação
                                     </Button>
@@ -171,7 +132,7 @@ export default function Home() {
                             </Link>
                             <Link href="/transparencia">
                                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                    <Button size="lg" variant="outline" className="border-2 border-azul-500 text-azul-600 hover:bg-azul-50 text-lg px-10 py-7 font-bold backdrop-blur-sm shadow-lg shadow-azul-100/50">
+                                    <Button size="lg" variant="outline" className="border-2 border-primary text-primary hover:bg-primary/10 text-lg px-10 py-7 font-bold backdrop-blur-sm shadow-lg shadow-primary/10">
                                         Ver Transparência
                                     </Button>
                                 </motion.div>
@@ -201,7 +162,7 @@ export default function Home() {
             <NoticiasEventos />
 
             {/* Impact Section - NOSSOS NÚMEROS */}
-            <section className="bg-slate-50 py-12 md:py-16">
+            <section className="bg-muted/10 py-12 md:py-16">
                 <div className="container mx-auto px-4">
                     <motion.div
                         className="text-center mb-16"
@@ -210,10 +171,10 @@ export default function Home() {
                         viewport={{ once: true, margin: "-100px" }}
                         transition={{ duration: 0.6 }}
                     >
-                        <h2 className="text-5xl font-black text-gray-900 mb-4">
-                            Nosso Impacto em <span className="bg-gradient-to-r from-rosa-500 to-azul-500 bg-clip-text text-transparent">2024</span> 📊
+                        <h2 className="text-5xl font-black text-foreground mb-4">
+                            Nosso Impacto em <span className="text-primary">2024</span> 📊
                         </h2>
-                        <p className="text-xl text-gray-600">
+                        <p className="text-xl text-muted-foreground">
                             Transparência é nosso compromisso com você
                         </p>
                     </motion.div>
@@ -232,18 +193,18 @@ export default function Home() {
                                 animate="rest"
                                 variants={scaleOnHover}
                             >
-                                <Card className="bg-white border-rosa-100 hover:border-rosa-300 transition-all cursor-pointer overflow-hidden group shadow-lg shadow-gray-100">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-rosa-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <Card className="bg-card border-border hover:border-primary transition-all cursor-pointer overflow-hidden group shadow-lg shadow-muted/20">
+                                    <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                     <CardHeader className="text-center relative z-10">
                                         <motion.div
-                                            className="mx-auto w-16 h-16 bg-gradient-to-br from-rosa-100 to-rosa-200 rounded-full flex items-center justify-center mb-4 shadow-sm"
+                                            className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 shadow-sm"
                                             whileHover={{ rotate: 360 }}
                                             transition={{ duration: 0.6 }}
                                         >
-                                            <Users className="h-8 w-8 text-rosa-600" />
+                                            <Users className="h-8 w-8 text-primary" />
                                         </motion.div>
-                                        <CardTitle className="text-5xl font-black bg-gradient-to-r from-rosa-500 to-rosa-400 bg-clip-text text-transparent">1.247</CardTitle>
-                                        <CardDescription className="text-base text-gray-600">Pacientes Atendidos</CardDescription>
+                                        <CardTitle className="text-5xl font-black text-primary">1.247</CardTitle>
+                                        <CardDescription className="text-base text-muted-foreground">Pacientes Atendidos</CardDescription>
                                     </CardHeader>
                                 </Card>
                             </motion.div>
@@ -256,18 +217,18 @@ export default function Home() {
                                 animate="rest"
                                 variants={scaleOnHover}
                             >
-                                <Card className="bg-white border-azul-100 hover:border-azul-300 transition-all cursor-pointer overflow-hidden group shadow-lg shadow-gray-100">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-azul-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <Card className="bg-card border-border hover:border-primary transition-all cursor-pointer overflow-hidden group shadow-lg shadow-muted/20">
+                                    <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                     <CardHeader className="text-center relative z-10">
                                         <motion.div
-                                            className="mx-auto w-16 h-16 bg-gradient-to-br from-azul-100 to-azul-200 rounded-full flex items-center justify-center mb-4 shadow-sm"
+                                            className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 shadow-sm"
                                             whileHover={{ rotate: 360 }}
                                             transition={{ duration: 0.6 }}
                                         >
-                                            <Heart className="h-8 w-8 text-azul-600" />
+                                            <Heart className="h-8 w-8 text-primary" />
                                         </motion.div>
-                                        <CardTitle className="text-5xl font-black bg-gradient-to-r from-azul-500 to-azul-400 bg-clip-text text-transparent">3.892</CardTitle>
-                                        <CardDescription className="text-base text-gray-600">Sessões de Tratamento</CardDescription>
+                                        <CardTitle className="text-5xl font-black text-primary">3.892</CardTitle>
+                                        <CardDescription className="text-base text-muted-foreground">Sessões de Tratamento</CardDescription>
                                     </CardHeader>
                                 </Card>
                             </motion.div>
@@ -280,18 +241,18 @@ export default function Home() {
                                 animate="rest"
                                 variants={scaleOnHover}
                             >
-                                <Card className="bg-white border-rosa-100 hover:border-rosa-300 transition-all cursor-pointer overflow-hidden group shadow-lg shadow-gray-100">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-rosa-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <Card className="bg-card border-border hover:border-primary transition-all cursor-pointer overflow-hidden group shadow-lg shadow-muted/20">
+                                    <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                     <CardHeader className="text-center relative z-10">
                                         <motion.div
-                                            className="mx-auto w-16 h-16 bg-gradient-to-br from-rosa-100 to-rosa-200 rounded-full flex items-center justify-center mb-4 shadow-sm"
+                                            className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 shadow-sm"
                                             whileHover={{ rotate: 360 }}
                                             transition={{ duration: 0.6 }}
                                         >
-                                            <Building2 className="h-8 w-8 text-rosa-600" />
+                                            <Building2 className="h-8 w-8 text-primary" />
                                         </motion.div>
-                                        <CardTitle className="text-5xl font-black bg-gradient-to-r from-rosa-500 to-rosa-400 bg-clip-text text-transparent">R$ 2.1M</CardTitle>
-                                        <CardDescription className="text-base text-gray-600">Investidos em Infraestrutura</CardDescription>
+                                        <CardTitle className="text-5xl font-black text-primary">R$ 2.1M</CardTitle>
+                                        <CardDescription className="text-base text-muted-foreground">Investidos em Infraestrutura</CardDescription>
                                     </CardHeader>
                                 </Card>
                             </motion.div>
@@ -304,18 +265,18 @@ export default function Home() {
                                 animate="rest"
                                 variants={scaleOnHover}
                             >
-                                <Card className="bg-white border-azul-100 hover:border-azul-300 transition-all cursor-pointer overflow-hidden group shadow-lg shadow-gray-100">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-azul-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <Card className="bg-card border-border hover:border-primary transition-all cursor-pointer overflow-hidden group shadow-lg shadow-muted/20">
+                                    <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                     <CardHeader className="text-center relative z-10">
                                         <motion.div
-                                            className="mx-auto w-16 h-16 bg-gradient-to-br from-azul-100 to-azul-200 rounded-full flex items-center justify-center mb-4 shadow-sm"
+                                            className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 shadow-sm"
                                             whileHover={{ rotate: 360 }}
                                             transition={{ duration: 0.6 }}
                                         >
-                                            <TrendingUp className="h-8 w-8 text-azul-600" />
+                                            <TrendingUp className="h-8 w-8 text-primary" />
                                         </motion.div>
-                                        <CardTitle className="text-5xl font-black bg-gradient-to-r from-azul-500 to-azul-400 bg-clip-text text-transparent">89%</CardTitle>
-                                        <CardDescription className="text-base text-gray-600">Taxa de Sucesso</CardDescription>
+                                        <CardTitle className="text-5xl font-black text-primary">89%</CardTitle>
+                                        <CardDescription className="text-base text-muted-foreground">Taxa de Sucesso</CardDescription>
                                     </CardHeader>
                                 </Card>
                             </motion.div>
@@ -325,7 +286,7 @@ export default function Home() {
             </section>
 
             {/* Call to Action */}
-            <section className="bg-slate-50 py-12 md:py-16">
+            <section className="bg-muted/30 py-12 md:py-16">
                 <div className="container mx-auto px-4">
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
@@ -337,7 +298,7 @@ export default function Home() {
                             whileHover={{ scale: 1.02 }}
                             transition={{ duration: 0.3 }}
                         >
-                            <Card className="bg-gradient-to-r from-rosa-600 to-azul-600 border-0 text-white overflow-hidden relative shadow-2xl shadow-rosa-500/50">
+                            <Card className="bg-primary/90 border-0 text-primary-foreground overflow-hidden relative shadow-2xl shadow-primary/30">
                                 <motion.div
                                     className="absolute inset-0 bg-white opacity-0"
                                     whileHover={{ opacity: 0.1 }}
@@ -355,8 +316,8 @@ export default function Home() {
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
                                         >
-                                            <Button size="lg" className="bg-white text-rosa-600 hover:bg-gray-100 text-xl px-12 py-8 font-black shadow-2xl">
-                                                <Heart className="mr-3 h-7 w-7" />
+                                            <Button size="lg" className="bg-background text-foreground hover:bg-muted text-xl px-12 py-8 font-black shadow-xl">
+                                                <Heart className="mr-3 h-7 w-7 text-primary" />
                                                 Quero Ajudar Agora
                                             </Button>
                                         </motion.div>
@@ -369,35 +330,35 @@ export default function Home() {
             </section>
 
             {/* Footer */}
-            <footer className="bg-gray-50 border-t border-gray-200 text-gray-800 py-16">
+            <footer className="bg-muted/10 border-t border-border text-foreground py-16">
                 <div className="container mx-auto px-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
                         <div>
                             <div className="flex items-center space-x-2 mb-4">
-                                <Heart className="h-6 w-6 text-rosa-400" />
-                                <span className="text-xl font-bold bg-gradient-to-r from-rosa-500 to-azul-500 bg-clip-text text-transparent">APCC</span>
+                                <Heart className="h-6 w-6 text-primary" />
+                                <span className="text-xl font-bold text-primary">APCC</span>
                             </div>
-                            <p className="text-gray-600">
+                            <p className="text-muted-foreground">
                                 Associação Paraguaçuense de Combate ao Câncer
                             </p>
                         </div>
                         <div>
-                            <h3 className="font-bold mb-4 text-rosa-600">Links Rápidos</h3>
-                            <ul className="space-y-2 text-gray-600">
-                                <li><Link href="/" className="hover:text-rosa-600 transition-colors">Início</Link></li>
-                                <li><Link href="/transparencia" className="hover:text-azul-600 transition-colors">Transparência</Link></li>
-                                <li><Link href="/doar" className="hover:text-rosa-600 transition-colors">Doar</Link></li>
+                            <h3 className="font-bold mb-4 text-primary">Links Rápidos</h3>
+                            <ul className="space-y-2 text-muted-foreground">
+                                <li><Link href="/" className="hover:text-primary transition-colors">Início</Link></li>
+                                <li><Link href="/transparencia" className="hover:text-primary transition-colors">Transparência</Link></li>
+                                <li><Link href="/doar" className="hover:text-primary transition-colors">Doar</Link></li>
                             </ul>
                         </div>
                         <div>
-                            <h3 className="font-bold mb-4 text-azul-600">Contato</h3>
-                            <p className="text-gray-600">
+                            <h3 className="font-bold mb-4 text-primary">Contato</h3>
+                            <p className="text-muted-foreground">
                                 Email: contato@apcc.org.br<br />
                                 Telefone: (13) 3471-XXXX
                             </p>
                         </div>
                     </div>
-                    <div className="border-t border-gray-200 mt-12 pt-8 text-center text-gray-500">
+                    <div className="border-t border-border mt-12 pt-8 text-center text-muted-foreground">
                         <p>© 2024 APCC - Todos os direitos reservados | Lei 13.019/2014</p>
                     </div>
                 </div>

@@ -1,11 +1,10 @@
-"use client";
-
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, Facebook, Newspaper, ArrowRight, MapPin, Clock } from "lucide-react";
 import InstagramFeed from "./InstagramFeed";
+
 
 // Mock data - substituir por API real
 const noticias = [
@@ -83,7 +82,22 @@ const fadeInUp = {
     visible: { opacity: 1, y: 0 }
 };
 
+import { useEffect, useState } from "react";
+import { getNewsItems } from "@/app/admin/actions";
+
 export default function NoticiasEventos() {
+    const [news, setNews] = useState<any[]>(noticias);
+
+    useEffect(() => {
+        const fetchNews = async () => {
+            const fetched = await getNewsItems();
+            if (fetched && fetched.length > 0) {
+                setNews(fetched);
+            }
+        };
+        fetchNews();
+    }, []);
+
     return (
         <div className="bg-slate-50 py-12 md:py-16">
             <div className="container mx-auto px-4">
@@ -98,8 +112,8 @@ export default function NoticiasEventos() {
                     className="mb-12 md:mb-16"
                 >
                     <div className="text-center mb-12">
-                        <h2 className="text-5xl font-black text-gray-900 mb-4">
-                            Siga-nos nas <span className="bg-gradient-to-r from-rosa-500 to-azul-500 bg-clip-text text-transparent">
+                        <h2 className="text-5xl font-black text-foreground mb-4">
+                            Siga-nos nas <span className="text-primary">
                                 Redes Sociais
                             </span> 📱
                         </h2>
@@ -113,13 +127,13 @@ export default function NoticiasEventos() {
                         <InstagramFeed />
 
                         {/* Facebook Feed */}
-                        <Card className="bg-white border-azul-100 shadow-lg shadow-gray-100">
+                        <Card className="bg-card border-border shadow-lg shadow-muted/20">
                             <CardHeader>
-                                <CardTitle className="text-gray-900 flex items-center gap-2">
-                                    <Facebook className="h-6 w-6 text-blue-500" />
+                                <CardTitle className="text-foreground flex items-center gap-2">
+                                    <Facebook className="h-6 w-6 text-primary" />
                                     Facebook
                                 </CardTitle>
-                                <CardDescription className="text-gray-600">
+                                <CardDescription className="text-muted-foreground">
                                     APCC Oficial
                                 </CardDescription>
                             </CardHeader>
@@ -168,18 +182,18 @@ export default function NoticiasEventos() {
                     className="mb-12 md:mb-16"
                 >
                     <div className="text-center mb-12">
-                        <h2 className="text-5xl font-black text-gray-900 mb-4">
-                            <span className="bg-gradient-to-r from-rosa-500 to-azul-500 bg-clip-text text-transparent">
+                        <h2 className="text-5xl font-black text-foreground mb-4">
+                            <span className="text-primary">
                                 Notícias
                             </span> 📰
                         </h2>
-                        <p className="text-xl text-gray-600">
+                        <p className="text-xl text-muted-foreground">
                             Fique por dentro das nossas ações e histórias
                         </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        {noticias.map((noticia, index) => (
+                        {news.slice(0, 3).map((noticia, index) => (
                             <motion.div
                                 key={noticia.id}
                                 initial={{ opacity: 0, y: 20 }}
@@ -187,30 +201,30 @@ export default function NoticiasEventos() {
                                 viewport={{ once: true }}
                                 transition={{ delay: index * 0.1 }}
                             >
-                                <Card className="bg-white border-rosa-100 hover:border-rosa-300 transition-all cursor-pointer group overflow-hidden h-full shadow-lg shadow-gray-100">
-                                    <div className="relative h-48 bg-gradient-to-br from-rosa-50 to-azul-50 overflow-hidden">
-                                        <div className="absolute inset-0 bg-gradient-to-t from-white to-transparent" />
+                                <Card className="bg-card border-border hover:border-primary/50 transition-all cursor-pointer group overflow-hidden h-full shadow-lg shadow-muted/20">
+                                    <div className="relative h-48 bg-muted overflow-hidden">
+                                        <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
                                         <div className="absolute top-4 left-4">
-                                            <span className="px-3 py-1 bg-rosa-600 text-white text-xs font-bold rounded-full">
+                                            <span className="px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-full shadow-sm">
                                                 {noticia.categoria}
                                             </span>
                                         </div>
                                     </div>
                                     <CardHeader>
-                                        <CardDescription className="text-gray-500 text-sm">
+                                        <CardDescription className="text-muted-foreground text-sm">
                                             {new Date(noticia.data).toLocaleDateString('pt-BR', {
                                                 day: '2-digit',
                                                 month: 'long',
                                                 year: 'numeric'
                                             })}
                                         </CardDescription>
-                                        <CardTitle className="text-gray-900 group-hover:text-rosa-500 transition-colors">
+                                        <CardTitle className="text-foreground group-hover:text-primary transition-colors">
                                             {noticia.titulo}
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-gray-600 mb-4">{noticia.resumo}</p>
-                                        <Button variant="ghost" className="text-rosa-600 hover:text-rosa-700 p-0 hover:bg-transparent">
+                                        <p className="text-muted-foreground mb-4">{noticia.resumo}</p>
+                                        <Button variant="ghost" className="text-primary hover:text-primary/80 p-0 hover:bg-transparent">
                                             Ler mais <ArrowRight className="ml-2 h-4 w-4" />
                                         </Button>
                                     </CardContent>
@@ -222,7 +236,7 @@ export default function NoticiasEventos() {
                     <div className="text-center">
                         <Button
                             variant="outline"
-                            className="border-rosa-500 text-rosa-400 hover:bg-rosa-500/10"
+                            className="border-primary text-primary hover:bg-primary/10"
                         >
                             <Newspaper className="mr-2 h-4 w-4" />
                             Ver Todas as Notícias
@@ -239,12 +253,12 @@ export default function NoticiasEventos() {
                     variants={fadeInUp}
                 >
                     <div className="text-center mb-12">
-                        <h2 className="text-5xl font-black text-gray-900 mb-4">
-                            Próximos <span className="bg-gradient-to-r from-azul-500 to-rosa-500 bg-clip-text text-transparent">
+                        <h2 className="text-5xl font-black text-foreground mb-4">
+                            Próximos <span className="text-primary">
                                 Eventos
                             </span> 📅
                         </h2>
-                        <p className="text-xl text-gray-600">
+                        <p className="text-xl text-muted-foreground">
                             Participe das nossas ações e campanhas
                         </p>
                     </div>

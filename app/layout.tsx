@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import WhatsAppWidget from "@/components/WhatsAppWidget";
+import { Header } from "@/components/layout/Header";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -55,21 +56,34 @@ export const metadata: Metadata = {
     },
 };
 
+import { ThemeProvider } from "@/components/theme-provider";
+import { GlobalThemeWrapper } from "@/components/global-theme-wrapper";
+
 export default function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="pt-BR">
+        <html lang="pt-BR" suppressHydrationWarning>
             <head>
                 <link rel="manifest" href="/manifest.json" />
                 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
                 <meta name="theme-color" content="#ffffff" />
             </head>
             <body className={inter.className}>
-                {children}
-                <WhatsAppWidget />
+                <ThemeProvider
+                    attribute="class"
+                    defaultTheme="light"
+                    enableSystem={false}
+                    disableTransitionOnChange
+                >
+                    <GlobalThemeWrapper>
+                        <Header />
+                        {children}
+                        <WhatsAppWidget />
+                    </GlobalThemeWrapper>
+                </ThemeProvider>
             </body>
         </html>
     );

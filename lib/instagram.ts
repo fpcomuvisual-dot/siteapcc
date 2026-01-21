@@ -8,8 +8,8 @@ const FALLBACK_POSTS = [
     {
         id: '1',
         caption: 'Momentos especiais da nossa campanha Outubro Rosa! 🌸 Juntos somos mais fortes na luta contra o câncer. #APCC #OutubroRosa #Solidariedade',
-        media_url: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&q=80',
-        permalink: 'https://instagram.com',
+        media_url: '/news-1.jpg',
+        permalink: 'https://instagram.com/apccppta',
         timestamp: new Date().toISOString(),
         like_count: 124,
         comments_count: 12
@@ -17,8 +17,8 @@ const FALLBACK_POSTS = [
     {
         id: '2',
         caption: 'Agradecemos a todos os voluntários que fizeram do nosso bazar um sucesso. Toda a renda será revertida para o tratamento dos nossos pacientes. 💙',
-        media_url: 'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&q=80',
-        permalink: 'https://instagram.com',
+        media_url: '/news-2.jpg',
+        permalink: 'https://instagram.com/apccppta',
         timestamp: new Date(Date.now() - 86400000).toISOString(),
         like_count: 89,
         comments_count: 5
@@ -26,8 +26,8 @@ const FALLBACK_POSTS = [
     {
         id: '3',
         caption: 'Informação importante: Nossos horários de atendimento mudaram. Confira no post! 🏥',
-        media_url: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800&q=80',
-        permalink: 'https://instagram.com',
+        media_url: '/news-3.jpg',
+        permalink: 'https://instagram.com/apccppta',
         timestamp: new Date(Date.now() - 172800000).toISOString(),
         like_count: 45,
         comments_count: 2
@@ -35,8 +35,8 @@ const FALLBACK_POSTS = [
     {
         id: '4',
         caption: 'Hoje recebemos a visita especial da equipe da Prefeitura. Parcerias que salvam vidas! 🤝',
-        media_url: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800&q=80',
-        permalink: 'https://instagram.com',
+        media_url: '/news-4.jpg',
+        permalink: 'https://instagram.com/apccppta',
         timestamp: new Date(Date.now() - 259200000).toISOString(),
         like_count: 230,
         comments_count: 34
@@ -44,17 +44,17 @@ const FALLBACK_POSTS = [
     {
         id: '5',
         caption: 'Prevenção é o melhor remédio. Agende seus exames preventivos conosco. 🩺 #Saúde #Prevenção',
-        media_url: 'https://images.unsplash.com/photo-1579684385136-137af7546191?w=800&q=80',
-        permalink: 'https://instagram.com',
+        media_url: '/news-5.jpg',
+        permalink: 'https://instagram.com/apccppta',
         timestamp: new Date(Date.now() - 345600000).toISOString(),
         like_count: 67,
         comments_count: 8
     },
     {
         id: '6',
-        caption: 'Um sorriso que nos motiva a continuar. Dona Maria, venceu a luta! 🎉',
-        media_url: 'https://images.unsplash.com/photo-1581056771107-24ca5f033842?w=800&q=80',
-        permalink: 'https://instagram.com',
+        caption: 'Junte-se à nossa causa. Seja um doador e ajude a salvar vidas. ❤️ #Doe #APCC',
+        media_url: '/news-1.jpg',
+        permalink: 'https://instagram.com/apccppta',
         timestamp: new Date(Date.now() - 432000000).toISOString(),
         like_count: 512,
         comments_count: 89
