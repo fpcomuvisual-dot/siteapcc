@@ -15,7 +15,7 @@ export function GlobalThemeWrapper({ children }: { children: React.ReactNode }) 
             const settings = await getThemeSettings();
 
             // Apply Dark Mode Preference
-            if (settings.darkMode) {
+            if (settings?.darkMode) {
                 setTheme('dark')
             } else {
                 setTheme('light')
@@ -24,7 +24,7 @@ export function GlobalThemeWrapper({ children }: { children: React.ReactNode }) 
             // Apply Campaign Theme Class
             // Remove any existing theme classes first
             document.body.classList.remove('theme-rosa', 'theme-azul', 'theme-laranja');
-            if (settings.theme) {
+            if (settings?.theme) {
                 document.body.classList.add(settings.theme);
             }
         }
