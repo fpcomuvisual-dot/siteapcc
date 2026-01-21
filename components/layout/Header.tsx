@@ -37,8 +37,8 @@ export function Header() {
 
                         {/* Desktop Menu */}
                         <div className="hidden md:flex items-center space-x-6">
-                            <Link href="/" className="text-foreground/80 hover:text-primary transition-colors font-medium">
-                                Início
+                            <Link href="/sobre" className="text-foreground/80 hover:text-primary transition-colors font-medium">
+                                Sobre
                             </Link>
                             <Link href="/transparencia" className="text-foreground/80 hover:text-primary transition-colors font-medium">
                                 Transparência
@@ -65,8 +65,13 @@ export function Header() {
                             </Link>
                         </div>
 
-                        {/* Mobile Menu Button */}
-                        <div className="md:hidden z-50">
+                        {/* Mobile Actions (Doar + Menu) */}
+                        <div className="md:hidden z-50 flex items-center gap-2">
+                            <Link href="/doar">
+                                <Button size="sm" className="bg-primary hover:bg-primary/90 border-0 font-bold text-primary-foreground shadow-md shadow-primary/20 text-xs px-3 h-8">
+                                    Doar
+                                </Button>
+                            </Link>
                             <button onClick={toggleMenu} className="text-primary p-2">
                                 {isMenuOpen ? <X className="h-8 w-8" /> : <Menu className="h-8 w-8" />}
                             </button>
@@ -85,11 +90,11 @@ export function Header() {
                         >
                             <div className="flex flex-col space-y-6 text-2xl font-bold text-center">
                                 <Link
-                                    href="/"
+                                    href="/sobre"
                                     className="text-foreground hover:text-primary transition-colors py-2"
                                     onClick={toggleMenu}
                                 >
-                                    Início
+                                    Sobre
                                 </Link>
                                 <Link
                                     href="/transparencia"
@@ -118,12 +123,6 @@ export function Header() {
                                         <Lock className="w-5 h-5" />
                                         Área Restrita
                                     </button>
-
-                                    <Link href="/doar" onClick={toggleMenu} className="w-full">
-                                        <Button className="w-full bg-primary hover:bg-primary/90 border-0 font-bold text-primary-foreground text-xl py-6 shadow-xl shadow-primary/20">
-                                            Doar Agora
-                                        </Button>
-                                    </Link>
                                 </div>
                             </div>
                         </motion.div>

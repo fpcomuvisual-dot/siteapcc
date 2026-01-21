@@ -59,6 +59,7 @@ export default function InstagramFeed() {
                         <a href={post.permalink} target="_blank" rel="noopener noreferrer" className="block h-full">
                             <div className="group relative aspect-square overflow-hidden rounded-xl bg-slate-900 cursor-pointer shadow-md">
                                 {/* Image */}
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                     src={post.media_url}
                                     alt={post.caption}

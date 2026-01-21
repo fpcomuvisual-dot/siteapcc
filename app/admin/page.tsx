@@ -390,6 +390,7 @@ export default function AdminDashboard() {
                                                     </div>
 
                                                     <div id="preview-container" className="hidden absolute inset-0 w-full h-full p-2">
+                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
                                                         <img id="preview-image" src="" alt="Preview" className="w-full h-full object-cover rounded-md" />
                                                     </div>
                                                 </div>
