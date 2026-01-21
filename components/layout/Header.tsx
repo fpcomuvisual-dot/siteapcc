@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
+import { Menu, X, Heart, ShoppingBag, Lock } from "lucide-react";
+import { useState } from "react";
+import { LoginDialog } from "@/components/auth/LoginDialog";
 
 export function Header() {
     const [isLoginOpen, setIsLoginOpen] = useState(false);
