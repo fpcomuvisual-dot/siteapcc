@@ -40,6 +40,9 @@ export function Header() {
                             <Link href="/sobre" className="text-foreground/80 hover:text-primary transition-colors font-medium">
                                 Sobre
                             </Link>
+                            <Link href="/calendario" className="text-foreground/80 hover:text-primary transition-colors font-medium">
+                                Calendário
+                            </Link>
                             <Link href="/transparencia" className="text-foreground/80 hover:text-primary transition-colors font-medium">
                                 Transparência
                             </Link>
@@ -95,6 +98,13 @@ export function Header() {
                                     onClick={toggleMenu}
                                 >
                                     Sobre
+                                </Link>
+                                <Link
+                                    href="/calendario"
+                                    className="text-foreground hover:text-primary transition-colors py-2"
+                                    onClick={toggleMenu}
+                                >
+                                    Calendário
                                 </Link>
                                 <Link
                                     href="/transparencia"
