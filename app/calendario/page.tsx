@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -11,19 +11,20 @@ import { ArrowRight } from "lucide-react";
 
 gsap.registerPlugin(ScrollTrigger, Observer);
 
+// Define gradient backgrounds explicitly for inline usage if Tailwind fails
 const months = [
-    { name: "JAN", full: "Janeiro", color: "bg-gradient-to-br from-yellow-400 to-orange-500" },
-    { name: "FEV", full: "Fevereiro", color: "bg-gradient-to-br from-purple-500 to-pink-500" },
-    { name: "MAR", full: "Março", color: "bg-gradient-to-br from-orange-500 to-amber-700" },
-    { name: "ABR", full: "Abril", color: "bg-gradient-to-br from-blue-400 to-teal-500" },
-    { name: "MAI", full: "Maio", color: "bg-gradient-to-br from-pink-400 to-rose-500" },
-    { name: "JUN", full: "Junho", color: "bg-gradient-to-br from-red-500 to-yellow-500" },
-    { name: "JUL", full: "Julho", color: "bg-gradient-to-br from-blue-600 to-indigo-700" },
-    { name: "AGO", full: "Agosto", color: "bg-gradient-to-br from-blue-800 to-slate-800" },
-    { name: "SET", full: "Setembro", color: "bg-gradient-to-br from-green-400 to-emerald-600" },
-    { name: "OUT", full: "Outubro", color: "bg-gradient-to-br from-pink-500 to-rose-600" },
-    { name: "NOV", full: "Novembro", color: "bg-gradient-to-br from-blue-500 to-cyan-600" },
-    { name: "DEZ", full: "Dezembro", color: "bg-gradient-to-br from-red-600 to-green-700" },
+    { name: "JAN", full: "Janeiro", bg: "linear-gradient(135deg, #facc15 0%, #f97316 100%)" },
+    { name: "FEV", full: "Fevereiro", bg: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" },
+    { name: "MAR", full: "Março", bg: "linear-gradient(135deg, #f97316 0%, #b45309 100%)" },
+    { name: "ABR", full: "Abril", bg: "linear-gradient(135deg, #60a5fa 0%, #14b8a6 100%)" },
+    { name: "MAI", full: "Maio", bg: "linear-gradient(135deg, #f472b6 0%, #f43f5e 100%)" },
+    { name: "JUN", full: "Junho", bg: "linear-gradient(135deg, #ef4444 0%, #eab308 100%)" },
+    { name: "JUL", full: "Julho", bg: "linear-gradient(135deg, #2563eb 0%, #4338ca 100%)" },
+    { name: "AGO", full: "Agosto", bg: "linear-gradient(135deg, #1e40af 0%, #1e293b 100%)" },
+    { name: "SET", full: "Setembro", bg: "linear-gradient(135deg, #4ade80 0%, #059669 100%)" },
+    { name: "OUT", full: "Outubro", bg: "linear-gradient(135deg, #ec4899 0%, #e11d48 100%)" },
+    { name: "NOV", full: "Novembro", bg: "linear-gradient(135deg, #3b82f6 0%, #0891b2 100%)" },
+    { name: "DEZ", full: "Dezembro", bg: "linear-gradient(135deg, #dc2626 0%, #15803d 100%)" },
 ];
 
 export default function CalendarPage() {
@@ -31,30 +32,22 @@ export default function CalendarPage() {
     const wheelRef = useRef<HTMLDivElement>(null);
     const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
 
-    // Configuration for the Arch
-    // A large radius centered well below the screen creates a gentle arch at the top
-    const radius = 1500; // px
+    // Arch Radius configuration
+    const radius = 1500;
 
     useGSAP(() => {
         if (!wheelRef.current) return;
 
-        // Position cards around the wheel - Upper Arch
-        const sliceDeg = 15; // 15 degrees per card tight arch
-        const initialOffset = -90; // Start at Top (-90 degrees)
+        // Position cards around the wheel - Arch Layout
+        const sliceDeg = 15;
+        const initialOffset = -90; // Top Center
 
         cardsRef.current.forEach((card, i) => {
             if (!card) return;
-
-            // Distribute them starting from Top-Leftish to Bottom-Rightish on the circle?
-            // Actually, we stack them around -90.
-            // Let's assume we want JAN to be the "Active" one at start (-90).
             const angleDeg = initialOffset + (i * sliceDeg);
 
-            // Note: 0 degrees is East. -90 is North. 
-            // We want cards upright-ish tangent
-
             gsap.set(card, {
-                rotation: angleDeg + 90, // Makes top of card point away from center
+                rotation: angleDeg + 90,
                 x: Math.cos(angleDeg * Math.PI / 180) * radius,
                 y: Math.sin(angleDeg * Math.PI / 180) * radius,
                 transformOrigin: "50% 50%"
@@ -64,19 +57,12 @@ export default function CalendarPage() {
         // Rotation Logic
         let currentRotation = 0;
 
-        // Scroll / Wheel Interaction to rotate the entire wheel
         Observer.create({
             target: window,
             type: "wheel,touch,pointer",
             onChange: (self) => {
-                // Scroll Down (deltaY > 0) -> Rotate CCW (negative) -> Move cards Left
-                const delta = self.deltaY * 0.15; // Sensitivity
+                const delta = self.deltaY * 0.15;
                 currentRotation -= delta;
-
-                // Add soft limits / rubber banding?
-                // Let's keep it infinite-feeling but practically limited by list length
-                // Total range: 12 cards * 15 deg = 180 deg. 
-                // Start is 0. End is -180 roughly.
 
                 gsap.to(wheelRef.current, {
                     rotation: currentRotation,
@@ -99,29 +85,50 @@ export default function CalendarPage() {
 
     return (
         <SmoothScrolling>
+            {/* INLINE STYLES: Absolute Fallback for Critical Visuals */}
             <div
                 ref={containerRef}
-                className="relative w-full h-[100vh] overflow-hidden flex flex-col items-center justify-end font-sans bg-[#050505] text-white"
+                className="relative w-full h-[100vh] overflow-hidden flex flex-col items-center justify-end font-sans"
+                style={{
+                    backgroundColor: '#050505',
+                    color: 'white',
+                    height: '100vh',
+                    overflow: 'hidden',
+                    position: 'relative'
+                }}
             >
-                {/* Background Ambient Glow */}
+                {/* Background Ambient Glow - Inline Blur */}
                 <div
-                    className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] pointer-events-none opacity-30"
-                    style={{ width: '80vw', height: '40vh', background: 'radial-gradient(circle, #ec4899 0%, transparent 70%)' }}
+                    className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
+                    style={{
+                        width: '80vw',
+                        height: '40vh',
+                        background: 'radial-gradient(circle, #ec4899 0%, transparent 70%)',
+                        opacity: 0.3,
+                        position: 'absolute',
+                        top: 0,
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        filter: 'blur(120px)', // Standard CSS blur
+                        zIndex: 10
+                    }}
                 />
 
                 {/* The Wheel Container */}
-                {/* Positioned so its center is way down, creating an arch at the top */}
                 <div
                     ref={wheelRef}
                     className="absolute left-1/2 z-20 will-change-transform"
                     style={{
                         width: '0px',
                         height: '0px',
-                        // Center of wheel is at Top + Radius + offset?
-                        // We want the TOP of the wheel (at -90deg) to be at Y ~ 10% of screen.
-                        // CenterY = 10%vh + Radius
-                        // Let's approximate: 100px from top.
-                        top: `calc(100px + ${radius}px)`
+                        // ADJUSTED TOP POSITION:
+                        // CenterY = TopOffset + Radius.
+                        // Previous: 100px + Radius. Result: Card centers at 100px. Top at -50px. (Clipped)
+                        // New: 300px + Radius. Result: Card centers at 300px. Top at 150px. (Visible)
+                        top: `calc(320px + ${radius}px)`,
+                        position: 'absolute',
+                        left: '50%',
+                        zIndex: 20
                     }}
                 >
                     {months.map((month, index) => (
@@ -132,23 +139,61 @@ export default function CalendarPage() {
                             style={{
                                 width: '220px',
                                 height: '300px',
-                                // Center anchor point
                                 left: -110,
                                 top: -150,
+                                position: 'absolute'
                             }}
                         >
-                            {/* Card Content */}
-                            <div className={`w-full h-full rounded-[24px] p-1 shadow-2xl transition-all duration-300 ease-out group-hover:scale-110 border border-white/5 ${month.color}`}>
-                                <div className="w-full h-full bg-black/95 backdrop-blur-xl rounded-[20px] flex flex-col items-center justify-between p-6">
-                                    <span className="text-5xl font-black text-white/10 self-start">{index + 1}</span>
+                            {/* Card Content - Inline Gradients */}
+                            <div
+                                className="w-full h-full rounded-[24px] p-1 shadow-2xl transition-all duration-300 ease-out group-hover:scale-110"
+                                style={{
+                                    background: month.bg,
+                                    borderRadius: '24px',
+                                    padding: '4px',
+                                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                                }}
+                            >
+                                <div
+                                    className="w-full h-full rounded-[20px] flex flex-col items-center justify-between p-6"
+                                    style={{
+                                        backgroundColor: 'rgba(5, 5, 5, 0.95)',
+                                        borderRadius: '20px',
+                                        padding: '1.5rem',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        backdropFilter: 'blur(12px)'
+                                    }}
+                                >
+                                    <span style={{ fontSize: '3rem', fontWeight: 900, color: 'rgba(255,255,255,0.1)', alignSelf: 'flex-start' }}>
+                                        {index + 1}
+                                    </span>
 
-                                    <div className="text-center mt-2">
-                                        <h3 className="text-3xl font-bold text-white tracking-wide">{month.name}</h3>
-                                        <p className="text-xs uppercase tracking-widest text-white/50 mt-2">{month.full}</p>
+                                    <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                                        <h3 style={{ fontSize: '1.875rem', fontWeight: 700, color: 'white', letterSpacing: '0.05em' }}>
+                                            {month.name}
+                                        </h3>
+                                        <p style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.5)', marginTop: '0.5rem' }}>
+                                            {month.full}
+                                        </p>
                                     </div>
 
-                                    <div className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center mt-4 group-hover:bg-white group-hover:text-black transition-colors">
-                                        <ArrowRight className="w-5 h-5" />
+                                    <div
+                                        style={{
+                                            width: '2.5rem',
+                                            height: '2.5rem',
+                                            borderRadius: '9999px',
+                                            border: '1px solid rgba(255,255,255,0.2)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            marginTop: '1rem',
+                                            color: 'white'
+                                        }}
+                                    >
+                                        <ArrowRight style={{ width: '1.25rem', height: '1.25rem' }} />
                                     </div>
                                 </div>
                             </div>
@@ -156,18 +201,58 @@ export default function CalendarPage() {
                     ))}
                 </div>
 
-                {/* Text Title - Positioned below the arch (Center Bottom) */}
-                <div className="relative z-30 text-center pb-20 select-none pointer-events-none">
-                    <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-none text-white mb-2">
+                {/* Text Title - Centered Bottom - INCREASED SIZE */}
+                <div
+                    className="relative z-30 text-center pb-20 select-none pointer-events-none"
+                    style={{
+                        position: 'relative',
+                        zIndex: 30,
+                        textAlign: 'center',
+                        paddingBottom: '5rem',
+                        pointerEvents: 'none'
+                    }}
+                >
+                    <h1
+                        className="text-6xl md:text-7xl font-black tracking-tighter leading-none text-white mb-2"
+                        style={{
+                            fontSize: '5rem', // INCREASED from 3rem
+                            fontWeight: 900,
+                            letterSpacing: '-0.05em',
+                            color: 'white',
+                            lineHeight: 1,
+                            marginBottom: '0.5rem'
+                        }}
+                    >
                         CALENDÁRIO
                     </h1>
-                    <span className="text-2xl md:text-3xl font-light text-white/60 tracking-[0.5em]">
+                    <span
+                        className="text-2xl md:text-3xl font-light text-white/60 tracking-[0.5em]"
+                        style={{
+                            fontSize: '1.5rem',
+                            fontWeight: 300,
+                            letterSpacing: '0.5em',
+                            color: 'rgba(255,255,255,0.6)'
+                        }}
+                    >
                         2026
                     </span>
 
-                    <div className="mt-8 pointer-events-auto">
+                    <div style={{ marginTop: '2rem', pointerEvents: 'auto' }}>
                         <Link href="/">
-                            <button className="px-6 py-2 border border-white/20 text-white hover:bg-white hover:text-black text-sm font-bold rounded-full transition-all uppercase tracking-widest">
+                            <button
+                                style={{
+                                    padding: '0.8rem 2rem', // Slightly bigger button
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    backgroundColor: 'transparent',
+                                    color: 'white',
+                                    fontSize: '0.875rem',
+                                    fontWeight: 700,
+                                    borderRadius: '9999px',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.1em',
+                                    cursor: 'pointer'
+                                }}
+                            >
                                 Voltar ao Início
                             </button>
                         </Link>
@@ -175,7 +260,19 @@ export default function CalendarPage() {
                 </div>
 
                 {/* Scroll Indicator */}
-                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/20 text-xs uppercase tracking-widest animate-pulse">
+                <div
+                    className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/20 text-xs uppercase tracking-widest animate-pulse"
+                    style={{
+                        position: 'absolute',
+                        bottom: '2rem',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        color: 'rgba(255,255,255,0.2)',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em'
+                    }}
+                >
                     Scroll to Explore
                 </div>
 
