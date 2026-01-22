@@ -9,7 +9,7 @@ import SmoothScrolling from "@/components/smooth-scrolling";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-gsap.registerPlugin(ScrollTrigger, Observer);
+// Plugin registration moved to useGSAP hook
 
 // Define gradient backgrounds explicitly for inline usage if Tailwind fails
 const months = [
@@ -36,6 +36,7 @@ export default function CalendarPage() {
     const radius = 1500;
 
     useGSAP(() => {
+        gsap.registerPlugin(ScrollTrigger, Observer);
         if (!wheelRef.current) return;
 
         // Position cards around the wheel - Arch Layout
