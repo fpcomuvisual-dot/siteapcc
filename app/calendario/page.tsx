@@ -1,13 +1,16 @@
 "use client";
 
-import { useRef, useMemo } from "react";
+import { useRef, useEffect } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { Observer } from "gsap/all";
 import SmoothScrolling from "@/components/smooth-scrolling";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-// Use distinct colors for each month card to ensure visibility against the dark background
+gsap.registerPlugin(ScrollTrigger, Observer);
+
 const months = [
     { name: "JAN", full: "Janeiro", color: "bg-gradient-to-br from-yellow-400 to-orange-500" },
     { name: "FEV", full: "Fevereiro", color: "bg-gradient-to-br from-purple-500 to-pink-500" },
@@ -25,167 +28,157 @@ const months = [
 
 export default function CalendarPage() {
     const containerRef = useRef<HTMLDivElement>(null);
-    const textRef = useRef<HTMLDivElement>(null);
+    const wheelRef = useRef<HTMLDivElement>(null);
     const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
 
-    // Calculate positions specifically for this render
-    // We use a large Radius relative to viewport (e.g., 35vw)
-    const cardPositions = useMemo(() => {
-        const radius = 35; // 35vw
-        const total = 12;
-
-        return months.map((month, i) => {
-            // Angle in degrees: 360 / 12 = 30 deg each.
-            // Start at -60deg (1 o'clock-ish) or 0deg (3 o'clock)?
-            // CSS Angle 0 is usually East (3 o'clock). 
-            // -90 is North (12 o'clock).
-            // Let's spread them starting from -60deg for January (1 o'clock)
-            const angleDeg = -60 + (i * 30);
-            const angleRad = (angleDeg * Math.PI) / 180;
-
-            // X = R * cos(theta), Y = R * sin(theta)
-            const x = Math.cos(angleRad) * radius;
-            const y = Math.sin(angleRad) * radius;
-
-            // Rotation: cards should likely be upright or rotated? 
-            // JoyJam is "around the circle" but usually text is readable. 
-            // Let's rotate them to match the angle for that 'ring' feel (angleDeg + 90 makes top point out).
-            const rotation = angleDeg + 90;
-
-            return { ...month, x, y, rotation, angleRad };
-        });
-    }, []);
+    // Configuration for the Arch
+    // A large radius centered well below the screen creates a gentle arch at the top
+    const radius = 1500; // px
 
     useGSAP(() => {
-        if (!containerRef.current) return;
+        if (!wheelRef.current) return;
 
-        // Mouse Parallax Logic
-        const handleMouseMove = (e: MouseEvent) => {
-            const { clientX, clientY } = e;
-            const { innerWidth, innerHeight } = window;
+        // Position cards around the wheel - Upper Arch
+        const sliceDeg = 15; // 15 degrees per card tight arch
+        const initialOffset = -90; // Start at Top (-90 degrees)
 
-            // Normalize coordinates -1 to 1
-            const x = (clientX / innerWidth) * 2 - 1;
-            const y = (clientY / innerHeight) * 2 - 1;
-
-            if (textRef.current) {
-                gsap.to(textRef.current, {
-                    x: x * 20,
-                    y: y * 20,
-                    duration: 1,
-                    ease: "power2.out"
-                });
-            }
-
-            cardsRef.current.forEach((card, i) => {
-                if (!card) return;
-                const config = cardPositions[i];
-
-                // We must MAINTAIN the base position while animating parallax!
-                // Initial translate is: translate(config.x vw, config.y vw)
-                // We add the parallax offset to that
-
-                // Note: We use 'vw' for both X and Y to ensure it's a perfect circle on all screens
-                // provided the container is wide enough.
-                gsap.to(card, {
-                    x: `calc(${config.x}vw + ${x * 40}px)`,
-                    y: `calc(${config.y}vw + ${y * 40}px)`,
-                    rotation: config.rotation + (x * 10),
-                    duration: 1.2,
-                    ease: "power2.out"
-                });
-            });
-        };
-
-        window.addEventListener("mousemove", handleMouseMove);
-
-        // Initial Floating Animation (Breathing)
         cardsRef.current.forEach((card, i) => {
             if (!card) return;
-            gsap.to(card, {
-                scale: 1.05,
-                duration: 1.5 + Math.random(),
-                repeat: -1,
-                yoyo: true,
-                ease: "sine.inOut",
-                delay: Math.random()
-            })
+
+            // Distribute them starting from Top-Leftish to Bottom-Rightish on the circle?
+            // Actually, we stack them around -90.
+            // Let's assume we want JAN to be the "Active" one at start (-90).
+            const angleDeg = initialOffset + (i * sliceDeg);
+
+            // Note: 0 degrees is East. -90 is North. 
+            // We want cards upright-ish tangent
+
+            gsap.set(card, {
+                rotation: angleDeg + 90, // Makes top of card point away from center
+                x: Math.cos(angleDeg * Math.PI / 180) * radius,
+                y: Math.sin(angleDeg * Math.PI / 180) * radius,
+                transformOrigin: "50% 50%"
+            });
         });
 
-        return () => window.removeEventListener("mousemove", handleMouseMove);
+        // Rotation Logic
+        let currentRotation = 0;
+
+        // Scroll / Wheel Interaction to rotate the entire wheel
+        Observer.create({
+            target: window,
+            type: "wheel,touch,pointer",
+            onChange: (self) => {
+                // Scroll Down (deltaY > 0) -> Rotate CCW (negative) -> Move cards Left
+                const delta = self.deltaY * 0.15; // Sensitivity
+                currentRotation -= delta;
+
+                // Add soft limits / rubber banding?
+                // Let's keep it infinite-feeling but practically limited by list length
+                // Total range: 12 cards * 15 deg = 180 deg. 
+                // Start is 0. End is -180 roughly.
+
+                gsap.to(wheelRef.current, {
+                    rotation: currentRotation,
+                    duration: 0.8,
+                    ease: "power2.out",
+                    overwrite: true
+                });
+            }
+        });
+
+        // Intro Animation
+        gsap.from(wheelRef.current, {
+            rotation: 40,
+            opacity: 0,
+            duration: 1.5,
+            ease: "power2.out"
+        });
+
     }, { scope: containerRef });
 
     return (
         <SmoothScrolling>
-            {/* Forced Black Background to ensure JoyJam aesthetic */}
             <div
                 ref={containerRef}
-                className="relative w-full h-screen overflow-hidden flex items-center justify-center font-sans"
-                style={{ backgroundColor: '#050505', color: '#ffffff' }}
+                className="relative w-full h-[100vh] overflow-hidden flex flex-col items-center justify-end font-sans bg-[#050505] text-white"
             >
                 {/* Background Ambient Glow */}
                 <div
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] pointer-events-none opacity-20"
-                    style={{ width: '60vw', height: '60vw', background: 'radial-gradient(circle, #ec4899 0%, transparent 70%)' }}
+                    className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] pointer-events-none opacity-30"
+                    style={{ width: '80vw', height: '40vh', background: 'radial-gradient(circle, #ec4899 0%, transparent 70%)' }}
                 />
 
-                {/* Central Hero Text */}
-                <div ref={textRef} className="relative z-30 text-center px-4 space-y-4 md:space-y-8 select-none">
-                    <h1 className="text-6xl md:text-9xl font-black tracking-tighter leading-none" style={{ color: 'white' }}>
-                        CALENDÁRIO
-                        <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/40 font-light">
-                            2026
-                        </span>
-                    </h1>
-                    <p className="text-lg md:text-2xl font-light tracking-widest uppercase text-white/70 max-w-2xl mx-auto">
-                        Explore nossos eventos
-                    </p>
+                {/* The Wheel Container */}
+                {/* Positioned so its center is way down, creating an arch at the top */}
+                <div
+                    ref={wheelRef}
+                    className="absolute left-1/2 z-20 will-change-transform"
+                    style={{
+                        width: '0px',
+                        height: '0px',
+                        // Center of wheel is at Top + Radius + offset?
+                        // We want the TOP of the wheel (at -90deg) to be at Y ~ 10% of screen.
+                        // CenterY = 10%vh + Radius
+                        // Let's approximate: 100px from top.
+                        top: `calc(100px + ${radius}px)`
+                    }}
+                >
+                    {months.map((month, index) => (
+                        <div
+                            key={index}
+                            ref={el => { cardsRef.current[index] = el }}
+                            className="absolute flex items-center justify-center cursor-pointer group"
+                            style={{
+                                width: '220px',
+                                height: '300px',
+                                // Center anchor point
+                                left: -110,
+                                top: -150,
+                            }}
+                        >
+                            {/* Card Content */}
+                            <div className={`w-full h-full rounded-[24px] p-1 shadow-2xl transition-all duration-300 ease-out group-hover:scale-110 border border-white/5 ${month.color}`}>
+                                <div className="w-full h-full bg-black/95 backdrop-blur-xl rounded-[20px] flex flex-col items-center justify-between p-6">
+                                    <span className="text-5xl font-black text-white/10 self-start">{index + 1}</span>
 
-                    <div className="flex gap-4 justify-center pt-4 pointer-events-auto">
+                                    <div className="text-center mt-2">
+                                        <h3 className="text-3xl font-bold text-white tracking-wide">{month.name}</h3>
+                                        <p className="text-xs uppercase tracking-widest text-white/50 mt-2">{month.full}</p>
+                                    </div>
+
+                                    <div className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center mt-4 group-hover:bg-white group-hover:text-black transition-colors">
+                                        <ArrowRight className="w-5 h-5" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Text Title - Positioned below the arch (Center Bottom) */}
+                <div className="relative z-30 text-center pb-20 select-none pointer-events-none">
+                    <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-none text-white mb-2">
+                        CALENDÁRIO
+                    </h1>
+                    <span className="text-2xl md:text-3xl font-light text-white/60 tracking-[0.5em]">
+                        2026
+                    </span>
+
+                    <div className="mt-8 pointer-events-auto">
                         <Link href="/">
-                            <button className="px-8 py-3 bg-white text-black font-bold rounded-full hover:scale-105 transition-transform">
-                                INÍCIO
+                            <button className="px-6 py-2 border border-white/20 text-white hover:bg-white hover:text-black text-sm font-bold rounded-full transition-all uppercase tracking-widest">
+                                Voltar ao Início
                             </button>
                         </Link>
                     </div>
                 </div>
 
-                {/* Floating Month Cards - Trigonometric Circle */}
-                {cardPositions.map((item, index) => (
-                    <div
-                        key={index}
-                        ref={el => { cardsRef.current[index] = el }}
-                        className="absolute z-20 flex items-center justify-center cursor-pointer group"
-                        style={{
-                            // Start absolute center
-                            top: '50%',
-                            left: '50%',
-                            width: '180px',
-                            height: '240px',
-                            // Initial Position via translate: Move from center by X/Y vw
-                            // We use `vw` for both to maintain circular shape regardless of aspect ratio
-                            transform: `translate(-50%, -50%) translate(${item.x}vw, ${item.y}vw) rotate(${item.rotation}deg)`
-                        }}
-                    >
-                        {/* Card Container with Transition */}
-                        <div className={`w-full h-full rounded-[24px] p-1 shadow-2xl transition-all duration-300 ease-out group-hover:scale-110 group-hover:z-50 group-hover:rotate-0 ${item.color}`}>
-                            {/* Inner Card Content */}
-                            <div className="w-full h-full bg-black/90 backdrop-blur-md rounded-[20px] flex flex-col items-center justify-between p-5 border border-white/10">
-                                <span className="text-4xl font-black text-white/20">{index + 1}</span>
+                {/* Scroll Indicator */}
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/20 text-xs uppercase tracking-widest animate-pulse">
+                    Scroll to Explore
+                </div>
 
-                                <div className="text-center">
-                                    <h3 className="text-2xl font-bold text-white tracking-wide">{item.name}</h3>
-                                    <p className="text-[10px] uppercase tracking-widest text-white/60 mt-1">{item.full}</p>
-                                </div>
-
-                                <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center">
-                                    <ArrowRight className="w-4 h-4 text-white" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ))}
             </div>
         </SmoothScrolling>
     );
