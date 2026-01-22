@@ -8,19 +8,20 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 // Use distinct colors for each month card to ensure visibility against the dark background
+// Layout: Circular/Elliptical distribution
 const months = [
-    { name: "JAN", full: "Janeiro", color: "bg-gradient-to-br from-yellow-400 to-orange-500", x: -35, y: -20, rotate: -12, scale: 0.9 },
-    { name: "FEV", full: "Fevereiro", color: "bg-gradient-to-br from-purple-500 to-pink-500", x: -25, y: 30, rotate: 15, scale: 1.1 },
-    { name: "MAR", full: "Março", color: "bg-gradient-to-br from-orange-500 to-amber-700", x: -40, y: 15, rotate: -5, scale: 0.95 },
-    { name: "ABR", full: "Abril", color: "bg-gradient-to-br from-blue-400 to-teal-500", x: 35, y: -25, rotate: 8, scale: 1.05 },
-    { name: "MAI", full: "Maio", color: "bg-gradient-to-br from-pink-400 to-rose-500", x: 25, y: 25, rotate: -20, scale: 0.9 },
-    { name: "JUN", full: "Junho", color: "bg-gradient-to-br from-red-500 to-yellow-500", x: 40, y: 5, rotate: 12, scale: 1.0 },
-    { name: "JUL", full: "Julho", color: "bg-gradient-to-br from-blue-600 to-indigo-700", x: -15, y: -35, rotate: -8, scale: 0.85 },
-    { name: "AGO", full: "Agosto", color: "bg-gradient-to-br from-blue-800 to-slate-800", x: 15, y: -30, rotate: 18, scale: 0.9 },
-    { name: "SET", full: "Setembro", color: "bg-gradient-to-br from-green-400 to-emerald-600", x: -20, y: 35, rotate: -15, scale: 0.95 },
-    { name: "OUT", full: "Outubro", color: "bg-gradient-to-br from-pink-500 to-rose-600", x: 20, y: 38, rotate: 10, scale: 1.0 },
-    { name: "NOV", full: "Novembro", color: "bg-gradient-to-br from-blue-500 to-cyan-600", x: 5, y: -40, rotate: -25, scale: 0.8 },
-    { name: "DEZ", full: "Dezembro", color: "bg-gradient-to-br from-red-600 to-green-700", x: -5, y: 42, rotate: 22, scale: 0.85 },
+    { name: "JAN", full: "Janeiro", color: "bg-gradient-to-br from-yellow-400 to-orange-500", x: 15, y: -38, rotate: 15, scale: 0.9 }, // 1 o'clock
+    { name: "FEV", full: "Fevereiro", color: "bg-gradient-to-br from-purple-500 to-pink-500", x: 32, y: -25, rotate: 25, scale: 1.1 }, // 2 o'clock
+    { name: "MAR", full: "Março", color: "bg-gradient-to-br from-orange-500 to-amber-700", x: 40, y: 0, rotate: 5, scale: 0.95 },   // 3 o'clock
+    { name: "ABR", full: "Abril", color: "bg-gradient-to-br from-blue-400 to-teal-500", x: 32, y: 25, rotate: -15, scale: 1.05 }, // 4 o'clock
+    { name: "MAI", full: "Maio", color: "bg-gradient-to-br from-pink-400 to-rose-500", x: 15, y: 38, rotate: -25, scale: 0.9 },   // 5 o'clock
+    { name: "JUN", full: "Junho", color: "bg-gradient-to-br from-red-500 to-yellow-500", x: 0, y: 42, rotate: 0, scale: 1.0 },    // 6 o'clock
+    { name: "JUL", full: "Julho", color: "bg-gradient-to-br from-blue-600 to-indigo-700", x: -15, y: 38, rotate: 25, scale: 0.85 }, // 7 o'clock
+    { name: "AGO", full: "Agosto", color: "bg-gradient-to-br from-blue-800 to-slate-800", x: -32, y: 25, rotate: 15, scale: 0.9 }, // 8 o'clock
+    { name: "SET", full: "Setembro", color: "bg-gradient-to-br from-green-400 to-emerald-600", x: -40, y: 0, rotate: -5, scale: 0.95 },  // 9 o'clock
+    { name: "OUT", full: "Outubro", color: "bg-gradient-to-br from-pink-500 to-rose-600", x: -32, y: -25, rotate: -15, scale: 1.0 }, // 10 o'clock
+    { name: "NOV", full: "Novembro", color: "bg-gradient-to-br from-blue-500 to-cyan-600", x: -15, y: -38, rotate: -25, scale: 0.8 }, // 11 o'clock
+    { name: "DEZ", full: "Dezembro", color: "bg-gradient-to-br from-red-600 to-green-700", x: 0, y: -42, rotate: 0, scale: 0.85 },   // 12 o'clock
 ];
 
 export default function CalendarPage() {
@@ -53,10 +54,11 @@ export default function CalendarPage() {
                 if (!card) return;
                 const factor = 1 + (i % 3) * 0.5; // Depth factor
 
+                // Animate parallax, adding to base rotation
                 gsap.to(card, {
-                    x: x * 60 * factor,
-                    y: y * 40 * factor,
-                    rotation: x * 5 * (i % 2 === 0 ? 1 : -1),
+                    x: x * 30 * factor,
+                    y: y * 30 * factor,
+                    rotation: (months[i].rotate) + (x * 10 * (i % 2 === 0 ? 1 : -1)),
                     duration: 1.2,
                     ease: "power2.out"
                 });
@@ -69,8 +71,7 @@ export default function CalendarPage() {
         cardsRef.current.forEach((card, i) => {
             if (!card) return;
             gsap.to(card, {
-                y: `+=${15 + Math.random() * 10}`,
-                rotation: `+=${2 + Math.random() * 2}`,
+                y: `+=15`,
                 duration: 2 + Math.random() * 2,
                 repeat: -1,
                 yoyo: true,
@@ -125,12 +126,14 @@ export default function CalendarPage() {
                         ref={el => { cardsRef.current[index] = el }}
                         className="absolute z-20 flex items-center justify-center cursor-pointer group"
                         style={{
-                            top: '50%',
-                            left: '50%',
+                            // Explicit Top/Left Positioning using calc() to ensure a ring layout
+                            left: `calc(50% + ${month.x}vw)`,
+                            top: `calc(50% + ${month.y}vh)`,
                             width: '180px',
                             height: '240px',
-                            // Initial static position based on data
-                            transform: `translate(-50%, -50%) translate(${month.x}vw, ${month.y}vh) rotate(${month.rotate}deg) scale(${month.scale})`
+                            // Center element on coordinate + Initial Rotation
+                            // Note: GSAP will modify transform, so we use it for animation, but base position is robust via left/top.
+                            transform: `translate(-50%, -50%) rotate(${month.rotate}deg) scale(${month.scale})`
                         }}
                     >
                         {/* Card Container with Transition */}
