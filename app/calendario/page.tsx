@@ -9,10 +9,11 @@ import SmoothScrolling from "@/components/smooth-scrolling";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-// Plugin registration moved to useGSAP hook
+// Register only on client side via hook, but defining here for type safety if needed? 
+// No, just importing is enough.
 
-// Define gradient backgrounds explicitly for inline usage if Tailwind fails
-const months = [
+// Base month data
+const baseMonths = [
     { name: "JAN", full: "Janeiro", bg: "linear-gradient(135deg, #facc15 0%, #f97316 100%)" },
     { name: "FEV", full: "Fevereiro", bg: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" },
     { name: "MAR", full: "Março", bg: "linear-gradient(135deg, #f97316 0%, #b45309 100%)" },
@@ -27,6 +28,12 @@ const months = [
     { name: "DEZ", full: "Dezembro", bg: "linear-gradient(135deg, #dc2626 0%, #15803d 100%)" },
 ];
 
+// Generate 24 months (2026 and 2027)
+const calendarData = [
+    ...baseMonths.map(m => ({ ...m, year: 2026 })),
+    ...baseMonths.map(m => ({ ...m, year: 2027 }))
+];
+
 export default function CalendarPage() {
     const containerRef = useRef<HTMLDivElement>(null);
     const wheelRef = useRef<HTMLDivElement>(null);
@@ -36,15 +43,19 @@ export default function CalendarPage() {
     const radius = 1500;
 
     useGSAP(() => {
+        // Safe registration on client
         gsap.registerPlugin(ScrollTrigger, Observer);
+
         if (!wheelRef.current) return;
 
-        // Position cards around the wheel - Arch Layout
+        // Position cards around the wheel - Full Circle Loop
+        // 24 cards * 15 degrees = 360 degrees.
         const sliceDeg = 15;
-        const initialOffset = -90; // Top Center
+        const initialOffset = -90; // Start Top Center
 
         cardsRef.current.forEach((card, i) => {
             if (!card) return;
+            // Angle logic
             const angleDeg = initialOffset + (i * sliceDeg);
 
             gsap.set(card, {
@@ -64,6 +75,9 @@ export default function CalendarPage() {
             onChange: (self) => {
                 const delta = self.deltaY * 0.15;
                 currentRotation -= delta;
+
+                // Infinite feeling? 
+                // For now just rotate.
 
                 gsap.to(wheelRef.current, {
                     rotation: currentRotation,
@@ -86,7 +100,7 @@ export default function CalendarPage() {
 
     return (
         <SmoothScrolling>
-            {/* INLINE STYLES: Absolute Fallback for Critical Visuals */}
+            {/* INLINE STYLES: Absolute Fallback */}
             <div
                 ref={containerRef}
                 className="relative w-full h-[100vh] overflow-hidden flex flex-col items-center justify-end font-sans"
@@ -98,7 +112,7 @@ export default function CalendarPage() {
                     position: 'relative'
                 }}
             >
-                {/* Background Ambient Glow - Inline Blur */}
+                {/* Background Ambient Glow */}
                 <div
                     className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
                     style={{
@@ -110,7 +124,7 @@ export default function CalendarPage() {
                         top: 0,
                         left: '50%',
                         transform: 'translate(-50%, -50%)',
-                        filter: 'blur(120px)', // Standard CSS blur
+                        filter: 'blur(120px)',
                         zIndex: 10
                     }}
                 />
@@ -122,17 +136,13 @@ export default function CalendarPage() {
                     style={{
                         width: '0px',
                         height: '0px',
-                        // ADJUSTED TOP POSITION:
-                        // CenterY = TopOffset + Radius.
-                        // Previous: 100px + Radius. Result: Card centers at 100px. Top at -50px. (Clipped)
-                        // New: 300px + Radius. Result: Card centers at 300px. Top at 150px. (Visible)
-                        top: `calc(320px + ${radius}px)`,
+                        top: `calc(320px + ${radius}px)`, // Keep lowered position
                         position: 'absolute',
                         left: '50%',
                         zIndex: 20
                     }}
                 >
-                    {months.map((month, index) => (
+                    {calendarData.map((item, index) => (
                         <div
                             key={index}
                             ref={el => { cardsRef.current[index] = el }}
@@ -145,11 +155,11 @@ export default function CalendarPage() {
                                 position: 'absolute'
                             }}
                         >
-                            {/* Card Content - Inline Gradients */}
+                            {/* Card Content */}
                             <div
                                 className="w-full h-full rounded-[24px] p-1 shadow-2xl transition-all duration-300 ease-out group-hover:scale-110"
                                 style={{
-                                    background: month.bg,
+                                    background: item.bg,
                                     borderRadius: '24px',
                                     padding: '4px',
                                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
@@ -168,16 +178,26 @@ export default function CalendarPage() {
                                         backdropFilter: 'blur(12px)'
                                     }}
                                 >
+                                    {/* Updated Number to be less prominent if year is present? Or just keep consistent 1-12 loop? 
+                                        Actually let's show Month Number + Year maybe? 
+                                        Or just 1-12 loop. 
+                                        Wait, index goes 1-24 now. 
+                                        Let's keep 1-12 but reset for 2027.
+                                    */}
                                     <span style={{ fontSize: '3rem', fontWeight: 900, color: 'rgba(255,255,255,0.1)', alignSelf: 'flex-start' }}>
-                                        {index + 1}
+                                        {(index % 12) + 1}
                                     </span>
 
                                     <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
                                         <h3 style={{ fontSize: '1.875rem', fontWeight: 700, color: 'white', letterSpacing: '0.05em' }}>
-                                            {month.name}
+                                            {item.name}
                                         </h3>
-                                        <p style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.5)', marginTop: '0.5rem' }}>
-                                            {month.full}
+                                        {/* Added Year Display */}
+                                        <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', marginTop: '0.25rem' }}>
+                                            {item.year}
+                                        </p>
+                                        <p style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.5)', marginTop: '0.25rem' }}>
+                                            {item.full}
                                         </p>
                                     </div>
 
@@ -202,7 +222,7 @@ export default function CalendarPage() {
                     ))}
                 </div>
 
-                {/* Text Title - Centered Bottom - INCREASED SIZE */}
+                {/* Text Title */}
                 <div
                     className="relative z-30 text-center pb-20 select-none pointer-events-none"
                     style={{
@@ -216,7 +236,7 @@ export default function CalendarPage() {
                     <h1
                         className="text-6xl md:text-7xl font-black tracking-tighter leading-none text-white mb-2"
                         style={{
-                            fontSize: '5rem', // INCREASED from 3rem
+                            fontSize: '5rem',
                             fontWeight: 900,
                             letterSpacing: '-0.05em',
                             color: 'white',
@@ -235,14 +255,14 @@ export default function CalendarPage() {
                             color: 'rgba(255,255,255,0.6)'
                         }}
                     >
-                        2026
+                        2026 / 27
                     </span>
 
                     <div style={{ marginTop: '2rem', pointerEvents: 'auto' }}>
                         <Link href="/">
                             <button
                                 style={{
-                                    padding: '0.8rem 2rem', // Slightly bigger button
+                                    padding: '0.8rem 2rem',
                                     border: '1px solid rgba(255,255,255,0.2)',
                                     backgroundColor: 'transparent',
                                     color: 'white',
