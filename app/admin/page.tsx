@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { analyzeDocument, saveSettings, createNewsItem, saveThemeSettings } from './actions'
 import {
     BarChart3,
@@ -14,8 +14,12 @@ import {
     Settings,
     Sparkles,
     Search,
-    Menu
+    Menu,
+    Calendar,
+    Trash2,
+    Plus
 } from 'lucide-react'
+import { createCalendarEvent, getCalendarEvents, deleteCalendarEvent } from './actions'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -66,6 +70,7 @@ export default function AdminDashboard() {
                     <SidebarItem icon={BarChart3} label="Visão Geral" active={activeSection === 'documentos'} onClick={() => setActiveSection('documentos')} />
                     <SidebarItem icon={FileText} label="Matérias e Notícias" active={activeSection === 'materias'} onClick={() => setActiveSection('materias')} />
                     <SidebarItem icon={LayoutDashboard} label="Editor da Hero" active={activeSection === 'hero'} onClick={() => setActiveSection('hero')} />
+                    <SidebarItem icon={Calendar} label="Calendário" active={activeSection === 'calendario'} onClick={() => setActiveSection('calendario')} />
                     <SidebarItem icon={Sparkles} label="Personalização" active={activeSection === 'personalizacao'} onClick={() => setActiveSection('personalizacao')} />
                     <SidebarItem icon={Settings} label="Configurações" />
                 </nav>
@@ -110,6 +115,8 @@ export default function AdminDashboard() {
                                     <SelectItem value="documentos">Documentos & IA</SelectItem>
                                     <SelectItem value="materias">Matérias e Notícias</SelectItem>
                                     <SelectItem value="hero">Editor da Home (Hero)</SelectItem>
+                                    <SelectItem value="calendario">Calendário</SelectItem>
+                                    <SelectItem value="personalizacao">Personalização Visual</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -485,6 +492,10 @@ export default function AdminDashboard() {
                                 </CardContent>
                             </Card>
                         )}
+                        {/* CONTENT: CALENDÁRIO */}
+                        {activeSection === 'calendario' && (
+                            <CalendarManager />
+                        )}
                     </div>
 
                     {/* Right Column - History & Recent */}
@@ -522,6 +533,184 @@ export default function AdminDashboard() {
                 </div>
             </main>
         </div>
+    )
+}
+
+function CalendarManager() {
+    const [year, setYear] = useState(2026)
+    const [month, setMonth] = useState(1) // 1 = Janeiro
+    const [events, setEvents] = useState<any[]>([])
+    const [loading, setLoading] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
+    // Fetch events when year/month changes
+    useEffect(() => {
+        let isMounted = true
+        async function load() {
+            setLoading(true)
+            const data = await getCalendarEvents(year, month)
+            if (isMounted && data) {
+                setEvents(data)
+                setLoading(false)
+            } else if (isMounted) {
+                setEvents([])
+                setLoading(false)
+            }
+        }
+        load()
+        return () => { isMounted = false }
+    }, [year, month])
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Tem certeza que deseja remover este evento?')) return
+        setIsSubmitting(true)
+        const result = await deleteCalendarEvent(id)
+        if (result.success) {
+            const data = await getCalendarEvents(year, month)
+            setEvents(data)
+        } else {
+            alert(result.message)
+        }
+        setIsSubmitting(false)
+    }
+
+    const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        setIsSubmitting(true)
+        const formData = new FormData(e.currentTarget)
+        formData.append('year', year.toString())
+        formData.append('month', month.toString())
+
+        const result = await createCalendarEvent(formData)
+        if (result.success) {
+            (e.target as HTMLFormElement).reset()
+            const data = await getCalendarEvents(year, month)
+            setEvents(data)
+        } else {
+            alert(result.message)
+        }
+        setIsSubmitting(false)
+    }
+
+    const months = [
+        "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+        "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ]
+
+    return (
+        <Card className="bg-white border-slate-200 shadow-sm">
+            <CardHeader>
+                <CardTitle className="text-slate-900 flex items-center gap-2">
+                    <Calendar className="text-pink-600 w-5 h-5" />
+                    Gerenciar Calendário
+                </CardTitle>
+                <CardDescription className="text-slate-500">
+                    Adicione eventos ao calendário da instituição.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex flex-col md:flex-row gap-6">
+                    {/* Left: Controls & Form */}
+                    <div className="flex-1 space-y-6">
+                        <div className="flex gap-4">
+                            <div className="w-1/3">
+                                <Label className="text-slate-700">Ano</Label>
+                                <Select value={year.toString()} onValueChange={(v) => setYear(parseInt(v))}>
+                                    <SelectTrigger className="bg-white border-slate-200">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="2026">2026</SelectItem>
+                                        <SelectItem value="2027">2027</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="w-2/3">
+                                <Label className="text-slate-700">Mês</Label>
+                                <Select value={month.toString()} onValueChange={(v) => setMonth(parseInt(v))}>
+                                    <SelectTrigger className="bg-white border-slate-200">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {months.map((m, i) => (
+                                            <SelectItem key={i} value={(i + 1).toString()}>{m}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleCreate} className="space-y-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <h4 className="font-semibold text-slate-800 flex items-center gap-2">
+                                <Plus className="w-4 h-4" /> Novo Evento
+                            </h4>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label className="text-slate-700 text-xs uppercase font-bold">Dia</Label>
+                                    <Input name="day" type="number" min="1" max="31" required placeholder="Ex: 15" className="bg-white border-slate-200" />
+                                </div>
+                                <div>
+                                    <Label className="text-slate-700 text-xs uppercase font-bold">Horário</Label>
+                                    <Input name="time" type="text" placeholder="Ex: 14h00" className="bg-white border-slate-200" />
+                                </div>
+                            </div>
+                            <div>
+                                <Label className="text-slate-700 text-xs uppercase font-bold">Título</Label>
+                                <Input name="title" required placeholder="Ex: Campanha de Doação" className="bg-white border-slate-200" />
+                            </div>
+                            <div>
+                                <Label className="text-slate-700 text-xs uppercase font-bold">Descrição (Detalhes)</Label>
+                                <Textarea name="description" placeholder="Detalhes do evento..." className="bg-white h-20 border-slate-200" />
+                            </div>
+                            <Button disabled={isSubmitting} className="w-full bg-pink-600 hover:bg-pink-700 text-white">
+                                {isSubmitting ? 'Salvando...' : 'Adicionar Evento'}
+                            </Button>
+                        </form>
+                    </div>
+
+                    {/* Right: List */}
+                    <div className="flex-1 border-l border-slate-100 pl-6">
+                        <h4 className="font-semibold text-slate-800 mb-4 flex items-center justify-between">
+                            Eventos em {months[month - 1]} / {year}
+                            {loading && <Sparkles className="w-4 h-4 animate-spin text-pink-500" />}
+                        </h4>
+
+                        {!loading && events.length === 0 && (
+                            <p className="text-sm text-slate-400 italic">Nenhum evento cadastrado neste mês.</p>
+                        )}
+
+                        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                            {events.map((evt) => (
+                                <div key={evt.id} className="group relative bg-white border border-slate-200 p-3 rounded-lg hover:border-pink-300 transition-colors shadow-sm">
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex flex-col items-center justify-center w-12 h-12 bg-pink-50 rounded-lg text-pink-700 border border-pink-100 flex-shrink-0">
+                                            <span className="text-xl font-bold leading-none">{evt.day}</span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h5 className="font-medium text-slate-900 truncate">{evt.title}</h5>
+                                            <p className="text-xs text-slate-500 flex items-center gap-2">
+                                                <span>{evt.time || 'Dia todo'}</span>
+                                            </p>
+                                            {evt.description && (
+                                                <p className="text-xs text-slate-600 mt-1 line-clamp-2">{evt.description}</p>
+                                            )}
+                                        </div>
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-8 w-8 text-slate-400 hover:text-red-600"
+                                            onClick={() => handleDelete(evt.id)}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
     )
 }
 

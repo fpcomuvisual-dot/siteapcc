@@ -141,3 +141,86 @@ export async function saveSettings(formData: FormData) {
     // Here we would save to DB
     return { success: true }
 }
+
+// --- CALENDAR ACTIONS ---
+
+export async function createCalendarEvent(formData: FormData) {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+
+        const day = formData.get('day') as string;
+        const month = parseInt(formData.get('month') as string);
+        const year = parseInt(formData.get('year') as string);
+        const title = formData.get('title') as string;
+        const time = formData.get('time') as string;
+        const description = formData.get('description') as string;
+
+        // Create a sortable date field for easier ordering: YYYY-MM-DD
+        // Assuming day is just the number "7" or "07"
+        const paddedDay = day.padStart(2, '0');
+        const paddedMonth = month.toString().padStart(2, '0');
+        const sortDate = `${year}-${paddedMonth}-${paddedDay}`;
+
+        await db.collection('calendar_events').add({
+            day,
+            month, // 0-based or 1-based? Let's assume 1-based (1=Jan) to match UI usually
+            year,
+            title,
+            time,
+            description,
+            sortDate,
+            createdAt: new Date().toISOString()
+        });
+
+        revalidatePath('/calendario');
+        revalidatePath('/admin');
+        return { success: true, message: 'Evento adicionado com sucesso!' };
+
+    } catch (error) {
+        console.error('Error creating calendar event:', error);
+        return { success: false, message: 'Erro ao adicionar evento.' };
+    }
+}
+
+export async function getCalendarEvents(year?: number, month?: number) {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+
+        let query = db.collection('calendar_events').orderBy('sortDate', 'asc');
+
+        if (year) {
+            query = query.where('year', '==', year);
+        }
+        if (month) {
+            query = query.where('month', '==', month);
+        }
+
+        const snapshot = await query.get();
+
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+    } catch (error) {
+        console.error('Error fetching calendar events:', error);
+        return [];
+    }
+}
+
+export async function deleteCalendarEvent(id: string) {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+
+        await db.collection('calendar_events').doc(id).delete();
+
+        revalidatePath('/calendario');
+        revalidatePath('/admin');
+        return { success: true, message: 'Evento removido com sucesso!' };
+    } catch (error) {
+        console.error('Error deleting calendar event:', error);
+        return { success: false, message: 'Erro ao remover evento.' };
+    }
+}
