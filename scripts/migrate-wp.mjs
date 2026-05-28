@@ -16,7 +16,7 @@ import admin from 'firebase-admin'
 const WP_BASE = process.env.WP_BASE_URL || 'https://apccppta.com.br'
 const STORAGE_BUCKET =
   process.env.FIREBASE_STORAGE_BUCKET ||
-  `${process.env.FIREBASE_PROJECT_ID}.appspot.com`
+  `${process.env.FIREBASE_PROJECT_ID}.firebasestorage.app`
 const FALLBACK_IMAGE = process.env.FALLBACK_IMAGE || ''
 
 function initFirebase() {
@@ -94,7 +94,8 @@ async function uploadImage(bucket, imageUrl, wpId) {
     const filename = `news/wp-${wpId}-${Date.now()}.${ext}`
     const fileRef = bucket.file(filename)
     await fileRef.save(buffer, { metadata: { contentType } })
-    await fileRef.makePublic()
+    // Buckets novos usam acesso uniforme: makePublic() falha.
+    // Conceda leitura pública uma vez no console: IAM → allUsers → Storage Object Viewer
     return `https://storage.googleapis.com/${bucket.name}/${filename}`
   } catch (e) {
     console.warn(`  ⚠️  imagem do post ${wpId} falhou (${e.message}); usando fallback`)

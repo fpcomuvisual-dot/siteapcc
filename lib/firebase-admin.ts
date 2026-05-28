@@ -27,7 +27,9 @@ export function createFirebaseAdminApp(params: FirebaseAdminConfig) {
     return admin.initializeApp({
         credential: cert,
         projectId: params.projectId,
-        storageBucket: `${params.projectId}.appspot.com`, // Assuming default bucket pattern
+        // Buckets novos usam .firebasestorage.app. Defina FIREBASE_STORAGE_BUCKET no .env se necessário.
+        // O bucket precisa ter leitura pública: IAM → allUsers → Storage Object Viewer
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${params.projectId}.firebasestorage.app`,
     })
 }
 

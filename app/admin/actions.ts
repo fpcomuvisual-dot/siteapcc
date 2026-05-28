@@ -44,8 +44,8 @@ export async function createNewsItem(formData: FormData) {
             },
         });
 
-        // Make pbulic
-        await fileRef.makePublic();
+        // Buckets novos usam acesso uniforme: makePublic() falha.
+        // Conceda leitura pública uma vez no console: IAM → allUsers → Storage Object Viewer
         const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
 
         // 2. Save to Firestore
