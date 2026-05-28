@@ -3,6 +3,17 @@ import { initAdmin } from '@/lib/firebase-admin'
 
 import { revalidatePath } from 'next/cache'
 
+function slugify(text: string): string {
+    return text
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-');
+}
+
 export async function createNewsItem(formData: FormData) {
     try {
         const { getStorage } = await import('firebase-admin/storage');
@@ -40,9 +51,10 @@ export async function createNewsItem(formData: FormData) {
         // 2. Save to Firestore
         await db.collection('news').add({
             titulo: title,
+            slug: slugify(title),
             categoria: category,
             data: date,
-            resumo: content.substring(0, 150) + '...', // Simple summary
+            resumo: content.substring(0, 150) + '...',
             conteudo: content,
             imagem: publicUrl,
             createdAt: new Date().toISOString()
@@ -74,6 +86,42 @@ export async function getNewsItems() {
     } catch (error) {
         console.error('Error fetching news:', error);
         return [];
+    }
+}
+
+export async function getAllNewsItems() {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+        const snapshot = await db.collection('news').orderBy('data', 'desc').get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error('Error fetching all news:', error);
+        return [];
+    }
+}
+
+export async function getNewsBySlug(slug: string) {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+
+        const snap = await db.collection('news').where('slug', '==', slug).limit(1).get();
+        if (!snap.empty) {
+            const doc = snap.docs[0];
+            return { id: doc.id, ...doc.data() } as Record<string, any>;
+        }
+
+        // Fallback: busca pelo ID do documento
+        const docById = await db.collection('news').doc(slug).get();
+        if (docById.exists) {
+            return { id: docById.id, ...docById.data() } as Record<string, any>;
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Error fetching news by slug:', error);
+        return null;
     }
 }
 
