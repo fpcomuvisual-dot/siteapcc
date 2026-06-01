@@ -5,7 +5,8 @@
 import { initAdmin } from '@/lib/firebase-admin'
 import { revalidatePath } from 'next/cache'
 
-function slugify(text: string): string {
+function slugify(text?: string): string {
+    if (!text) return '';
     return text
         .normalize('NFD')
         .replace(/[̀-ͯ]/g, '')
@@ -14,6 +15,37 @@ function slugify(text: string): string {
         .replace(/[^a-z0-9\s-]/g, '')
         .replace(/\s+/g, '-')
         .replace(/-+/g, '-');
+}
+
+function normalizeNewsDoc(id: string, d: Record<string, any>) {
+    const titulo = d.titulo ?? '';
+    return {
+        id,
+        titulo,
+        slug: d.slug || slugify(titulo) || id,
+        categoria: d.categoria ?? 'Notícia',
+        data: d.data ?? '',
+        resumo: d.resumo ?? '',
+        conteudo: d.conteudo ?? '',
+        imagem: d.imagem ?? '',
+        createdAt: d.createdAt ?? '',
+        // campos extras do WordPress (preservados se existirem)
+        ...(d.wpId !== undefined && { wpId: d.wpId }),
+        ...(d.origem !== undefined && { origem: d.origem }),
+    };
+}
+
+function normalizeTransparencyDoc(id: string, d: Record<string, any>) {
+    return {
+        id,
+        titulo: d.titulo ?? '',
+        categoria: d.categoria ?? 'Outros',
+        ano: typeof d.ano === 'number' ? d.ano : new Date().getFullYear(),
+        arquivo: d.arquivo ?? '',
+        descricao: d.descricao ?? '',
+        data: d.data ?? '',
+        createdAt: d.createdAt ?? '',
+    };
 }
 
 export async function createNewsItem(formData: FormData) {
@@ -75,16 +107,10 @@ export async function getNewsItems() {
     try {
         const { getFirestore } = await import('firebase-admin/firestore');
         const db = getFirestore(await initAdmin());
-
-        const snapshot = await db.collection('news')
-            .orderBy('data', 'desc')
-            .limit(3) // Fetch only latest 3
-            .get();
-
-        return snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        const snapshot = await db.collection('news').orderBy('data', 'desc').limit(3).get();
+        return snapshot.docs
+            .map(doc => { try { return normalizeNewsDoc(doc.id, doc.data()) } catch { return null } })
+            .filter(Boolean);
     } catch (error) {
         console.error('Error fetching news:', error);
         return [];
@@ -97,7 +123,9 @@ export async function getAllNewsItems() {
         const db = getFirestore(await initAdmin());
         const snapshot = await db.collection('news').orderBy('data', 'desc').get();
         console.log('[news] docs encontrados:', snapshot.size); // diagnóstico: aparece nos Runtime Logs da Vercel
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return snapshot.docs
+            .map(doc => { try { return normalizeNewsDoc(doc.id, doc.data()) } catch { return null } })
+            .filter(Boolean);
     } catch (error) {
         console.error('Error fetching all news:', error);
         return [];
@@ -111,14 +139,13 @@ export async function getNewsBySlug(slug: string) {
 
         const snap = await db.collection('news').where('slug', '==', slug).limit(1).get();
         if (!snap.empty) {
-            const doc = snap.docs[0];
-            return { id: doc.id, ...doc.data() } as Record<string, any>;
+            return normalizeNewsDoc(snap.docs[0].id, snap.docs[0].data());
         }
 
         // Fallback: busca pelo ID do documento
         const docById = await db.collection('news').doc(slug).get();
         if (docById.exists) {
-            return { id: docById.id, ...docById.data() } as Record<string, any>;
+            return normalizeNewsDoc(docById.id, docById.data() ?? {});
         }
 
         return null;
@@ -175,7 +202,9 @@ export async function getTransparencyDocs() {
         const { getFirestore } = await import('firebase-admin/firestore');
         const db = getFirestore(await initAdmin());
         const snapshot = await db.collection('transparency_docs').orderBy('ano', 'desc').get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return snapshot.docs
+            .map(doc => { try { return normalizeTransparencyDoc(doc.id, doc.data()) } catch { return null } })
+            .filter(Boolean);
     } catch (error) {
         console.error('Error fetching transparency docs:', error);
         return [];

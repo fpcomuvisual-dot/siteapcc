@@ -61,11 +61,9 @@ export default async function NoticiasPage() {
                                         </div>
                                         <CardHeader>
                                             <CardDescription className="text-muted-foreground text-sm">
-                                                {new Date(noticia.data).toLocaleDateString('pt-BR', {
-                                                    day: '2-digit',
-                                                    month: 'long',
-                                                    year: 'numeric',
-                                                })}
+                                                {noticia.data ? new Date(noticia.data).toLocaleDateString('pt-BR', {
+                                                    day: '2-digit', month: 'long', year: 'numeric',
+                                                }) : ''}
                                             </CardDescription>
                                             <CardTitle className="text-foreground group-hover:text-primary transition-colors line-clamp-2">
                                                 {noticia.titulo}

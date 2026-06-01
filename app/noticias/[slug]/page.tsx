@@ -58,11 +58,9 @@ export default async function NoticiaPage({ params }: Props) {
                     </span>
                     <span className="inline-flex items-center gap-1 text-muted-foreground text-sm">
                         <Calendar className="h-3 w-3" />
-                        {new Date(noticia.data).toLocaleDateString('pt-BR', {
-                            day: '2-digit',
-                            month: 'long',
-                            year: 'numeric',
-                        })}
+                        {noticia.data ? new Date(noticia.data).toLocaleDateString('pt-BR', {
+                            day: '2-digit', month: 'long', year: 'numeric',
+                        }) : ''}
                     </span>
                 </div>
 

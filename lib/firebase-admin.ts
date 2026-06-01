@@ -8,7 +8,11 @@ interface FirebaseAdminConfig {
 }
 
 function formatPrivateKey(key: string) {
-    return key.replace(/\\n/g, '\n')
+    if (!key) {
+        console.error('[firebase-admin] FIREBASE_PRIVATE_KEY indefinido — verifique as env vars na Vercel (Settings → Environment Variables).');
+        return '';
+    }
+    return key.replace(/\\n/g, '\n');
 }
 
 export function createFirebaseAdminApp(params: FirebaseAdminConfig) {
