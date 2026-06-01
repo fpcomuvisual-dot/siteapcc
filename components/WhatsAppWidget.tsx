@@ -5,7 +5,7 @@ import { FloatingWhatsApp } from 'react-floating-whatsapp';
 export default function WhatsAppWidget() {
     return (
         <FloatingWhatsApp
-            phoneNumber="5513347100000" // Substitua pelo número da APCC (DDI + DDD + Número)
+            phoneNumber="5518996958159"
             accountName="APCC"
             avatar="/icon-192.png" // Pode usar o logo da APCC
             statusMessage="Responde rápido"

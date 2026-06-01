@@ -1,6 +1,8 @@
 'use server'
+// NOTA: Se após o deploy o Firestore retornar 0 docs, verifique na Vercel:
+// Settings → Environment Variables → FIREBASE_PROJECT_ID = apcc-arquivo-site
+// FIREBASE_CLIENT_EMAIL e FIREBASE_PRIVATE_KEY devem ser idênticos ao .env.local
 import { initAdmin } from '@/lib/firebase-admin'
-
 import { revalidatePath } from 'next/cache'
 
 function slugify(text: string): string {
@@ -94,6 +96,7 @@ export async function getAllNewsItems() {
         const { getFirestore } = await import('firebase-admin/firestore');
         const db = getFirestore(await initAdmin());
         const snapshot = await db.collection('news').orderBy('data', 'desc').get();
+        console.log('[news] docs encontrados:', snapshot.size); // diagnóstico: aparece nos Runtime Logs da Vercel
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         console.error('Error fetching all news:', error);
@@ -124,6 +127,117 @@ export async function getNewsBySlug(slug: string) {
         return null;
     }
 }
+
+// --- TRANSPARENCY ACTIONS ---
+
+export async function createTransparencyDoc(formData: FormData) {
+    try {
+        const { getStorage } = await import('firebase-admin/storage');
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const app = await initAdmin();
+        const bucket = getStorage(app).bucket();
+        const db = getFirestore(app);
+
+        const titulo = formData.get('titulo') as string;
+        const categoria = formData.get('categoria') as string;
+        const ano = parseInt(formData.get('ano') as string);
+        const descricao = (formData.get('descricao') as string) || '';
+        const data = (formData.get('data') as string) || new Date().toISOString();
+        const arquivo = formData.get('arquivo') as File;
+
+        if (!arquivo || arquivo.size === 0) throw new Error('PDF é obrigatório');
+        if (arquivo.type !== 'application/pdf') throw new Error('Apenas PDFs são aceitos');
+
+        const buffer = Buffer.from(await arquivo.arrayBuffer());
+        const filename = `transparency/${Date.now()}-${arquivo.name.replace(/[^a-zA-Z0-9._-]/g, '')}`;
+        const fileRef = bucket.file(filename);
+        await fileRef.save(buffer, { metadata: { contentType: 'application/pdf' } });
+        // O bucket precisa ter leitura pública: IAM → allUsers → Storage Object Viewer
+        const arquivoUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+
+        await db.collection('transparency_docs').add({
+            titulo, categoria, ano, descricao, data, arquivo: arquivoUrl,
+            createdAt: new Date().toISOString(),
+        });
+
+        revalidatePath('/transparencia');
+        revalidatePath('/admin');
+        return { success: true, message: 'Documento publicado com sucesso!' };
+    } catch (error) {
+        console.error('Error creating transparency doc:', error);
+        const msg = error instanceof Error ? error.message : 'Erro ao publicar documento.';
+        return { success: false, message: msg };
+    }
+}
+
+export async function getTransparencyDocs() {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+        const snapshot = await db.collection('transparency_docs').orderBy('ano', 'desc').get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error('Error fetching transparency docs:', error);
+        return [];
+    }
+}
+
+export async function deleteTransparencyDoc(id: string) {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const { getStorage } = await import('firebase-admin/storage');
+        const app = await initAdmin();
+        const db = getFirestore(app);
+
+        const doc = await db.collection('transparency_docs').doc(id).get();
+        if (doc.exists) {
+            const data = doc.data();
+            if (data?.arquivo) {
+                try {
+                    const bucket = getStorage(app).bucket();
+                    const url = new URL(data.arquivo);
+                    const filePath = decodeURIComponent(url.pathname.replace(`/${bucket.name}/`, ''));
+                    await bucket.file(filePath).delete();
+                } catch { /* ignora se arquivo já não existir */ }
+            }
+            await db.collection('transparency_docs').doc(id).delete();
+        }
+
+        revalidatePath('/transparencia');
+        revalidatePath('/admin');
+        return { success: true, message: 'Documento removido.' };
+    } catch (error) {
+        console.error('Error deleting transparency doc:', error);
+        return { success: false, message: 'Erro ao remover documento.' };
+    }
+}
+
+// --- SEARCH ---
+
+export async function searchContent(query: string) {
+    // Para acervos maiores (milhares de docs), migrar para Algolia/Typesense.
+    // Hoje, filtro em memória é suficiente e instantâneo para ~100 docs.
+    const normalize = (s: string) =>
+        s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const q = normalize(query.trim());
+    if (!q || q.length < 2) return { news: [], docs: [] };
+
+    const [news, docs] = await Promise.all([getAllNewsItems(), getTransparencyDocs()]);
+
+    const matchedNews = (news as any[]).filter(n =>
+        normalize(n.titulo || '').includes(q) ||
+        normalize(n.resumo || '').includes(q) ||
+        normalize(n.categoria || '').includes(q)
+    );
+    const matchedDocs = (docs as any[]).filter(d =>
+        normalize(d.titulo || '').includes(q) ||
+        normalize(d.categoria || '').includes(q) ||
+        normalize(d.descricao || '').includes(q)
+    );
+    return { news: matchedNews, docs: matchedDocs };
+}
+
+// --- AI DEMO (apenas demonstração, não conectado a API real) ---
 
 export async function analyzeDocument(formData: FormData) {
     // Simulate network/processing delay (2 seconds)

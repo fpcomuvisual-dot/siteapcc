@@ -102,42 +102,25 @@ export default function NoticiasEventos() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <InstagramFeed />
 
-                        <Card className="bg-card border-border shadow-lg shadow-muted/20">
+                        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-lg shadow-muted/20">
                             <CardHeader>
                                 <CardTitle className="text-foreground flex items-center gap-2">
-                                    <Facebook className="h-6 w-6 text-primary" />
+                                    <Facebook className="h-6 w-6 text-blue-600" />
                                     Facebook
                                 </CardTitle>
                                 <CardDescription className="text-muted-foreground">
                                     APCC Oficial
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent>
-                                <div className="space-y-3">
-                                    {[1, 2, 3].map((i) => (
-                                        <div
-                                            key={i}
-                                            className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                                        >
-                                            <div className="flex items-start gap-3">
-                                                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center flex-shrink-0">
-                                                    <Facebook className="h-5 w-5 text-white" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <p className="text-sm text-gray-500 mb-1">Há {i} dias</p>
-                                                    <p className="text-gray-700 text-sm">
-                                                        Post de exemplo do Facebook #{i}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                            <CardContent className="space-y-4">
+                                <p className="text-gray-700">
+                                    Curta nossa página e acompanhe nossas atividades, campanhas e eventos.
+                                </p>
                                 <Button
-                                    className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                                     asChild
                                 >
-                                    <a href="https://facebook.com/apcc" target="_blank" rel="noopener noreferrer">
+                                    <a href="https://www.facebook.com/apccppta" target="_blank" rel="noopener noreferrer">
                                         <Facebook className="mr-2 h-4 w-4" />
                                         Curtir no Facebook
                                     </a>
