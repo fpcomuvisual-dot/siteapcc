@@ -1,8 +1,12 @@
 export const TRANSPARENCY_CATEGORIES = [
     'Estatuto',
     'Atas',
+    'Termos de Fomento',
+    'Planos de Trabalho',
+    'Pareceres',
     'Prestação de Contas',
     'Relatórios de Atividades',
+    'Declarações',
     'Demonstrações Financeiras',
     'Certidões',
     'Outros',
