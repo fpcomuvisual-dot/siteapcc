@@ -10,6 +10,12 @@ import { Calendar, Facebook, Newspaper, ArrowRight, MapPin, Clock } from "lucide
 import InstagramFeed from "./InstagramFeed";
 import { getNewsItems, getCalendarEvents } from "@/app/admin/actions";
 
+function displayCategory(cat: unknown): string {
+    const c = String(cat ?? '');
+    if (!c || c === 'Uncategorized' || c === 'uncategorized' || c === 'Sem categoria') return 'Notícia';
+    return c;
+}
+
 const fadeInUp = {
     hidden: { opacity: 0, y: 40 },
     visible: { opacity: 1, y: 0 }
@@ -162,18 +168,22 @@ export default function NoticiasEventos() {
                                     <Link href={`/noticias/${noticia.slug ?? noticia.id}`} className="block h-full">
                                         <Card className="bg-card border-border hover:border-primary/50 transition-all cursor-pointer group overflow-hidden h-full shadow-lg shadow-muted/20">
                                             <div className="relative h-48 bg-muted overflow-hidden">
-                                                {noticia.imagem && (
+                                                {noticia.imagem && String(noticia.imagem).startsWith('http') ? (
                                                     <Image
                                                         src={noticia.imagem}
-                                                        alt={noticia.titulo}
+                                                        alt={noticia.titulo ?? ''}
                                                         fill
                                                         className="object-cover group-hover:scale-105 transition-transform duration-300"
                                                     />
+                                                ) : (
+                                                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
+                                                        <Newspaper className="h-12 w-12 text-primary/20" />
+                                                    </div>
                                                 )}
                                                 <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
                                                 <div className="absolute top-4 left-4">
                                                     <span className="px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-full shadow-sm">
-                                                        {noticia.categoria}
+                                                        {displayCategory(noticia.categoria)}
                                                     </span>
                                                 </div>
                                             </div>

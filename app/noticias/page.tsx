@@ -4,6 +4,12 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowRight, Newspaper } from 'lucide-react';
 
+function displayCategory(cat: unknown): string {
+    const c = String(cat ?? '');
+    if (!c || c === 'Uncategorized' || c === 'uncategorized' || c === 'Sem categoria') return 'Notícia';
+    return c;
+}
+
 export const revalidate = 60;
 
 export const metadata = {
@@ -44,18 +50,22 @@ export default async function NoticiasPage() {
                                 >
                                     <Card className="bg-card border-border hover:border-primary/50 transition-all cursor-pointer group overflow-hidden h-full shadow-md hover:shadow-lg">
                                         <div className="relative h-48 bg-muted overflow-hidden">
-                                            {noticia.imagem && (
+                                            {noticia.imagem && String(noticia.imagem).startsWith('http') ? (
                                                 <Image
                                                     src={noticia.imagem}
-                                                    alt={noticia.titulo}
+                                                    alt={noticia.titulo ?? ''}
                                                     fill
                                                     className="object-cover group-hover:scale-105 transition-transform duration-300"
                                                 />
+                                            ) : (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
+                                                    <Newspaper className="h-12 w-12 text-primary/20" />
+                                                </div>
                                             )}
                                             <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
                                             <div className="absolute top-4 left-4">
                                                 <span className="px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-full shadow-sm">
-                                                    {noticia.categoria}
+                                                    {displayCategory(noticia.categoria)}
                                                 </span>
                                             </div>
                                         </div>
