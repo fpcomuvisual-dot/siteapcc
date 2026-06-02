@@ -9,6 +9,9 @@ import {
 } from '@/components/ui/select'
 import { TRANSPARENCY_CATEGORIES } from '@/lib/constants'
 
+// Radix UI Select não aceita value="" em SelectItem — usar sentinel distinto
+const ALL = '__all__'
+
 type Doc = {
     id: string
     titulo: string
@@ -20,8 +23,8 @@ type Doc = {
 }
 
 export default function TransparenciaContent({ docs }: { docs: Doc[] }) {
-    const [filterCat, setFilterCat] = useState('')
-    const [filterAno, setFilterAno] = useState('')
+    const [filterCat, setFilterCat] = useState(ALL)
+    const [filterAno, setFilterAno] = useState(ALL)
 
     const anos = useMemo(
         () => [...new Set(docs.map(d => d.ano))].sort((a, b) => b - a),
@@ -30,8 +33,8 @@ export default function TransparenciaContent({ docs }: { docs: Doc[] }) {
 
     const filtered = useMemo(() => {
         return docs.filter(d => {
-            if (filterCat && d.categoria !== filterCat) return false
-            if (filterAno && String(d.ano) !== filterAno) return false
+            if (filterCat !== ALL && d.categoria !== filterCat) return false
+            if (filterAno !== ALL && String(d.ano) !== filterAno) return false
             return true
         })
     }, [docs, filterCat, filterAno])
@@ -57,17 +60,20 @@ export default function TransparenciaContent({ docs }: { docs: Doc[] }) {
         )
     }
 
+    const hasFilter = filterCat !== ALL || filterAno !== ALL
+
     return (
         <div>
             {/* Filtros */}
             <div className="flex flex-wrap gap-3 mb-8 items-center">
                 <Filter className="h-4 w-4 text-muted-foreground" />
+
                 <Select value={filterCat} onValueChange={setFilterCat}>
                     <SelectTrigger className="w-52">
                         <SelectValue placeholder="Todas as categorias" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="">Todas as categorias</SelectItem>
+                        <SelectItem value={ALL}>Todas as categorias</SelectItem>
                         {TRANSPARENCY_CATEGORIES.map(c => (
                             <SelectItem key={c} value={c}>{c}</SelectItem>
                         ))}
@@ -79,18 +85,18 @@ export default function TransparenciaContent({ docs }: { docs: Doc[] }) {
                         <SelectValue placeholder="Ano" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="">Todos os anos</SelectItem>
+                        <SelectItem value={ALL}>Todos os anos</SelectItem>
                         {anos.map(a => (
                             <SelectItem key={a} value={String(a)}>{a}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
 
-                {(filterCat || filterAno) && (
+                {hasFilter && (
                     <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => { setFilterCat(''); setFilterAno('') }}
+                        onClick={() => { setFilterCat(ALL); setFilterAno(ALL) }}
                         className="text-muted-foreground"
                     >
                         Limpar filtros
@@ -132,7 +138,7 @@ export default function TransparenciaContent({ docs }: { docs: Doc[] }) {
                                                                     <p className="text-sm text-muted-foreground mt-0.5">{doc.descricao}</p>
                                                                 )}
                                                                 <p className="text-xs text-muted-foreground mt-1">
-                                                                    {new Date(doc.data).toLocaleDateString('pt-BR')}
+                                                                    {doc.data ? new Date(doc.data).toLocaleDateString('pt-BR') : ''}
                                                                 </p>
                                                             </div>
                                                             <Button variant="outline" size="sm" className="shrink-0" asChild>
