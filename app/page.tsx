@@ -6,8 +6,9 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heart, Users, Building2, TrendingUp, ArrowDown, Sparkles } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 import NoticiasEventos from "@/components/features/NoticiasEventos";
+import { getHeroSettings } from "@/app/admin/actions";
 
 // Animation variants
 const fadeInUp = {
@@ -35,15 +36,32 @@ const scaleOnHover = {
     }
 };
 
+const HERO_DEFAULT = {
+    titulo:       'Juntos Salvamos Vidas',
+    subtitulo:    'A APCC oferece apoio, tratamento e esperança para quem enfrenta o câncer. Somos uma família unida pela solidariedade. 💪',
+    heroImageUrl: '/hero-background.jpg',
+};
+
 export default function Home() {
     const heroRef = useRef(null);
     const { scrollYProgress } = useScroll({
         target: heroRef,
         offset: ["start start", "end start"]
     });
-
     const opacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
-    const scale = useTransform(scrollYProgress, [0, 1], [1, 1.2]);
+    const scale   = useTransform(scrollYProgress, [0, 1], [1, 1.2]);
+
+    const [hero, setHero] = useState(HERO_DEFAULT);
+
+    useEffect(() => {
+        getHeroSettings().then(s => {
+            setHero({
+                titulo:       s.titulo       || HERO_DEFAULT.titulo,
+                subtitulo:    s.subtitulo    || HERO_DEFAULT.subtitulo,
+                heroImageUrl: s.heroImageUrl || HERO_DEFAULT.heroImageUrl,
+            });
+        });
+    }, []);
 
     return (
         <div className="min-h-screen bg-white">
@@ -59,7 +77,7 @@ export default function Home() {
                 >
                     {/* Hero Image */}
                     <Image
-                        src="/hero-background.jpg"
+                        src={hero.heroImageUrl}
                         alt="APCC - Combate ao Câncer"
                         fill
                         className="object-cover object-center"
@@ -100,12 +118,7 @@ export default function Home() {
                             className="text-5xl md:text-7xl lg:text-8xl font-black leading-tight text-center"
                             variants={fadeInUp}
                         >
-                            <span className="block text-foreground mb-2">
-                                Juntos
-                            </span>
-                            <span className="block text-primary">
-                                Salvamos Vidas
-                            </span>
+                            <span className="block text-primary">{hero.titulo}</span>
                         </motion.h1>
 
                         {/* Subtitle */}
@@ -113,8 +126,7 @@ export default function Home() {
                             className="text-xl md:text-2xl text-muted-foreground leading-relaxed text-center max-w-3xl mx-auto"
                             variants={fadeInUp}
                         >
-                            A <strong className="text-primary">APCC</strong> oferece apoio, tratamento e esperança
-                            para quem enfrenta o câncer. Somos uma família unida pela solidariedade. 💪
+                            {hero.subtitulo}
                         </motion.p>
 
                         {/* CTA Buttons */}

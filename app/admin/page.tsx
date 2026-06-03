@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react'
 import {
     analyzeDocument, saveThemeSettings, createNewsItem,
     createTransparencyDoc, getTransparencyDocs, deleteTransparencyDoc,
-    getAllNewsItems,
+    getAllNewsItems, saveHeroSettings, getHeroSettings,
+    savePopupSettings, getPopupSettings,
 } from './actions'
 import { TRANSPARENCY_CATEGORIES } from '@/lib/constants'
 import {
     BarChart3, FileText, TrendingUp, Upload, Bot, CheckCircle2,
     LayoutDashboard, Settings, Sparkles, Menu, Calendar, Trash2, Plus, Shield,
+    Image as ImageIcon, Megaphone, Eye, EyeOff,
 } from 'lucide-react'
 import { createCalendarEvent, getCalendarEvents, deleteCalendarEvent } from './actions'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -59,7 +61,8 @@ export default function AdminDashboard() {
                     <SidebarItem icon={BarChart3} label="Visão Geral" active={activeSection === 'overview'} onClick={() => setActiveSection('overview')} />
                     <SidebarItem icon={FileText} label="Matérias e Notícias" active={activeSection === 'materias'} onClick={() => setActiveSection('materias')} />
                     <SidebarItem icon={Shield} label="Transparência" active={activeSection === 'transparencia'} onClick={() => setActiveSection('transparencia')} />
-                    <SidebarItem icon={LayoutDashboard} label="Editor da Hero" active={activeSection === 'hero'} onClick={() => setActiveSection('hero')} />
+                    <SidebarItem icon={ImageIcon} label="Editor da Hero" active={activeSection === 'hero'} onClick={() => setActiveSection('hero')} />
+                    <SidebarItem icon={Megaphone} label="Popup do Site" active={activeSection === 'popup'} onClick={() => setActiveSection('popup')} />
                     <SidebarItem icon={Calendar} label="Calendário" active={activeSection === 'calendario'} onClick={() => setActiveSection('calendario')} />
                     <SidebarItem icon={Sparkles} label="Personalização" active={activeSection === 'personalizacao'} onClick={() => setActiveSection('personalizacao')} />
                     <SidebarItem icon={Bot} label="Ferramentas IA" active={activeSection === 'ia'} onClick={() => setActiveSection('ia')} />
@@ -84,7 +87,8 @@ export default function AdminDashboard() {
                                     <SelectItem value="overview">Visão Geral</SelectItem>
                                     <SelectItem value="materias">Matérias e Notícias</SelectItem>
                                     <SelectItem value="transparencia">Transparência</SelectItem>
-                                    <SelectItem value="hero">Editor da Home (Hero)</SelectItem>
+                                    <SelectItem value="hero">Editor da Hero (imagem + texto)</SelectItem>
+                                    <SelectItem value="popup">Popup do Site</SelectItem>
                                     <SelectItem value="calendario">Calendário</SelectItem>
                                     <SelectItem value="personalizacao">Personalização Visual</SelectItem>
                                     <SelectItem value="ia">Ferramentas IA (Demo)</SelectItem>
@@ -233,30 +237,9 @@ export default function AdminDashboard() {
                     {activeSection === 'transparencia' && <TransparenciaAdmin onCountChange={setDocsCount} />}
 
                     {/* HERO */}
-                    {activeSection === 'hero' && (
-                        <Card className="bg-white border-slate-200 shadow-sm">
-                            <CardHeader>
-                                <CardTitle className="text-slate-900 flex items-center gap-2">
-                                    <span className="w-2 h-6 bg-pink-500 rounded-full" />
-                                    Hero Section
-                                </CardTitle>
-                                <CardDescription>Personalize a mensagem principal do site.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid gap-2">
-                                    <Label>Título Principal</Label>
-                                    <Input defaultValue="Juntos Salvamos Vidas" className="bg-white border-slate-200" />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label>Subtítulo</Label>
-                                    <Textarea defaultValue="A APCC oferece apoio, tratamento e esperança para pacientes em combate ao câncer." className="bg-white border-slate-200 min-h-[80px]" />
-                                </div>
-                                <div className="flex justify-end">
-                                    <Button className="bg-pink-600 hover:bg-pink-700 text-white">Salvar Alterações</Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
+                    {activeSection === 'hero' && <HeroEditor />}
+
+                    {activeSection === 'popup' && <PopupEditor />}
 
                     {/* PERSONALIZAÇÃO */}
                     {activeSection === 'personalizacao' && (
@@ -367,6 +350,215 @@ export default function AdminDashboard() {
                 </div>
             </main>
         </div>
+    )
+}
+
+// ─── Editor da Hero ───────────────────────────────────────────────────────────
+function HeroEditor() {
+    const [saving, setSaving]       = useState(false)
+    const [previewUrl, setPreviewUrl] = useState('')
+    const [currentImg, setCurrentImg] = useState('')
+    const [titulo, setTitulo]       = useState('')
+    const [subtitulo, setSubtitulo] = useState('')
+
+    useEffect(() => {
+        getHeroSettings().then(s => {
+            setTitulo(s.titulo || 'Juntos Salvamos Vidas')
+            setSubtitulo(s.subtitulo || 'A APCC oferece apoio, tratamento e esperança para quem enfrenta o câncer.')
+            setCurrentImg(s.heroImageUrl || '')
+        })
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+    async function handleSave(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault()
+        setSaving(true)
+        const formData = new FormData(e.currentTarget)
+        const result = await saveHeroSettings(formData)
+        setSaving(false)
+        if (result.success) {
+            alert(result.message)
+            if (result.heroImageUrl) setCurrentImg(result.heroImageUrl)
+            setPreviewUrl('')
+        } else {
+            alert(result.message)
+        }
+    }
+
+    return (
+        <Card className="bg-white border-slate-200 shadow-sm">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <ImageIcon className="text-pink-600 w-5 h-5" />
+                    Editor da Hero
+                </CardTitle>
+                <CardDescription>Imagem de fundo, título e subtítulo da página inicial.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <form onSubmit={handleSave} className="space-y-5">
+                    <div className="space-y-2">
+                        <Label>Título Principal</Label>
+                        <Input name="titulo" value={titulo} onChange={e => setTitulo(e.target.value)} className="bg-white border-slate-200" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Subtítulo</Label>
+                        <Textarea name="subtitulo" value={subtitulo} onChange={e => setSubtitulo(e.target.value)} className="bg-white border-slate-200 min-h-[80px]" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Imagem de Fundo da Hero</Label>
+                        {(previewUrl || currentImg) && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={previewUrl || currentImg} alt="Preview Hero" className="w-full h-40 object-cover rounded-lg border border-slate-200 mb-2" />
+                        )}
+                        <Input
+                            name="imagem"
+                            type="file"
+                            accept="image/*"
+                            className="bg-white border-slate-200"
+                            onChange={e => {
+                                const f = e.target.files?.[0]
+                                if (f) setPreviewUrl(URL.createObjectURL(f))
+                            }}
+                        />
+                        <p className="text-xs text-slate-500">JPG, PNG, WebP. Recomendado: 1920×1080px. Deixe vazio para manter a imagem atual.</p>
+                    </div>
+                    <div className="flex justify-end">
+                        <Button disabled={saving} className="bg-pink-600 hover:bg-pink-700 text-white gap-2">
+                            {saving ? <Sparkles className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                            {saving ? 'Salvando...' : 'Salvar Hero'}
+                        </Button>
+                    </div>
+                </form>
+            </CardContent>
+        </Card>
+    )
+}
+
+// ─── Editor do Popup ──────────────────────────────────────────────────────────
+function PopupEditor() {
+    const [saving, setSaving]       = useState(false)
+    const [ativo, setAtivo]         = useState(false)
+    const [titulo, setTitulo]       = useState('')
+    const [mensagem, setMensagem]   = useState('')
+    const [botaoTexto, setBotaoTexto] = useState('')
+    const [botaoLink, setBotaoLink] = useState('')
+    const [previewUrl, setPreviewUrl] = useState('')
+    const [currentImg, setCurrentImg] = useState('')
+
+    useEffect(() => {
+        getPopupSettings().then((p: any) => {
+            setAtivo(!!p?.ativo)
+            setTitulo(p?.titulo || '')
+            setMensagem(p?.mensagem || '')
+            setBotaoTexto(p?.botaoTexto || '')
+            setBotaoLink(p?.botaoLink || '')
+            setCurrentImg(p?.imagemUrl || '')
+        })
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+    async function handleSave(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault()
+        setSaving(true)
+        const formData = new FormData(e.currentTarget)
+        if (ativo) formData.set('ativo', 'on')
+        const result = await savePopupSettings(formData)
+        setSaving(false)
+        alert(result.message)
+        if (result.success) setPreviewUrl('')
+    }
+
+    return (
+        <Card className="bg-white border-slate-200 shadow-sm">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Megaphone className="text-pink-600 w-5 h-5" />
+                    Popup do Site
+                </CardTitle>
+                <CardDescription>
+                    Aviso/banner modal que aparece UMA VEZ por visitante. Ao salvar, reaparece para todos.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <form onSubmit={handleSave} className="space-y-5">
+                    {/* Toggle ativo */}
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+                        <div>
+                            <p className="font-semibold text-slate-900">Popup ativo</p>
+                            <p className="text-xs text-slate-500">Liga ou desliga o popup para todos os visitantes.</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setAtivo(!ativo)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${ativo ? 'bg-pink-600' : 'bg-slate-300'}`}
+                        >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${ativo ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Título do Popup</Label>
+                        <Input name="popupTitulo" value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex: Campanha Outubro Rosa 2025" className="bg-white border-slate-200" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Mensagem</Label>
+                        <Textarea name="popupMensagem" value={mensagem} onChange={e => setMensagem(e.target.value)} placeholder="Ex: Ajude-nos nesta campanha de prevenção. Cada doação faz a diferença!" className="bg-white border-slate-200 min-h-[80px]" />
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Texto do Botão (opcional)</Label>
+                            <Input name="popupBotaoTexto" value={botaoTexto} onChange={e => setBotaoTexto(e.target.value)} placeholder="Ex: Quero ajudar" className="bg-white border-slate-200" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Link do Botão (opcional)</Label>
+                            <Input name="popupBotaoLink" value={botaoLink} onChange={e => setBotaoLink(e.target.value)} placeholder="Ex: /doar ou https://..." className="bg-white border-slate-200" />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Imagem (opcional)</Label>
+                        {(previewUrl || currentImg) && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={previewUrl || currentImg} alt="Preview popup" className="w-full h-32 object-cover rounded-lg border border-slate-200 mb-2" />
+                        )}
+                        <Input
+                            name="popupImagem"
+                            type="file"
+                            accept="image/*"
+                            className="bg-white border-slate-200"
+                            onChange={e => {
+                                const f = e.target.files?.[0]
+                                if (f) setPreviewUrl(URL.createObjectURL(f))
+                            }}
+                        />
+                        <p className="text-xs text-slate-500">Deixe vazio para manter a imagem atual. Recomendado: 800×300px.</p>
+                    </div>
+
+                    {/* Preview */}
+                    {(titulo || mensagem) && (
+                        <div className="border border-dashed border-slate-300 rounded-xl p-4 bg-slate-50">
+                            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Preview do Popup</p>
+                            <div className="bg-white rounded-xl shadow-sm border p-4 max-w-xs mx-auto">
+                                <div className="h-1 bg-gradient-to-r from-rosa-500 to-azul-500 -mx-4 -mt-4 rounded-t-xl mb-4" />
+                                {titulo  && <p className="font-black text-slate-900 text-sm mb-1">{titulo}</p>}
+                                {mensagem && <p className="text-slate-600 text-xs leading-relaxed mb-3">{mensagem}</p>}
+                                {botaoTexto && <div className="bg-gradient-to-r from-rosa-600 to-azul-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg inline-block">{botaoTexto}</div>}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex justify-between items-center pt-2">
+                        <div className="flex items-center gap-2 text-sm">
+                            {ativo ? <Eye className="h-4 w-4 text-green-500" /> : <EyeOff className="h-4 w-4 text-slate-400" />}
+                            <span className={ativo ? 'text-green-600 font-medium' : 'text-slate-400'}>
+                                {ativo ? 'Popup visível no site' : 'Popup desativado'}
+                            </span>
+                        </div>
+                        <Button disabled={saving} className="bg-pink-600 hover:bg-pink-700 text-white gap-2">
+                            {saving ? <Sparkles className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                            {saving ? 'Salvando...' : 'Salvar Popup'}
+                        </Button>
+                    </div>
+                </form>
+            </CardContent>
+        </Card>
     )
 }
 

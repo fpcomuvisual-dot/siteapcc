@@ -288,6 +288,116 @@ export async function analyzeDocument(formData: FormData) {
     }
 }
 
+// --- HERO SETTINGS ---
+
+export async function getHeroSettings() {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+        const doc = await db.collection('settings').doc('global').get();
+        const d = doc.data() || {};
+        return {
+            titulo:      (d.heroTitulo     as string) || '',
+            subtitulo:   (d.heroSubtitulo  as string) || '',
+            heroImageUrl:(d.heroImageUrl   as string) || '',
+        };
+    } catch (error) {
+        console.error('Error fetching hero settings:', error);
+        return { titulo: '', subtitulo: '', heroImageUrl: '' };
+    }
+}
+
+export async function saveHeroSettings(formData: FormData) {
+    try {
+        const { getStorage } = await import('firebase-admin/storage');
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const app    = await initAdmin();
+        const db     = getFirestore(app);
+        const titulo    = formData.get('titulo')    as string;
+        const subtitulo = formData.get('subtitulo') as string;
+        const imagem    = formData.get('imagem')    as File;
+
+        const update: Record<string, unknown> = {
+            heroTitulo:    titulo    || '',
+            heroSubtitulo: subtitulo || '',
+            updatedAt:     new Date().toISOString(),
+        };
+
+        if (imagem && imagem.size > 0) {
+            if (!imagem.type.startsWith('image/')) throw new Error('Apenas imagens são aceitas');
+            const bucket   = getStorage(app).bucket();
+            const ext      = (imagem.name.split('.').pop() || 'jpg').toLowerCase();
+            const filename = `hero/hero-${Date.now()}.${ext}`;
+            await bucket.file(filename).save(Buffer.from(await imagem.arrayBuffer()), { metadata: { contentType: imagem.type } });
+            update.heroImageUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+        }
+
+        await db.collection('settings').doc('global').set(update, { merge: true });
+        revalidatePath('/');
+        return { success: true, message: 'Hero atualizada com sucesso!', heroImageUrl: update.heroImageUrl as string || null };
+    } catch (error) {
+        console.error('Error saving hero settings:', error);
+        return { success: false, message: error instanceof Error ? error.message : 'Erro ao salvar.' };
+    }
+}
+
+// --- POPUP SETTINGS ---
+
+export async function getPopupSettings() {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db  = getFirestore(await initAdmin());
+        const doc = await db.collection('settings').doc('global').get();
+        const d   = (doc.data() || {}) as Record<string, unknown>;
+        return (d.popup as Record<string, unknown>) || { ativo: false, titulo: '', mensagem: '', botaoTexto: '', botaoLink: '', versao: 1, imagemUrl: '' };
+    } catch (error) {
+        console.error('Error fetching popup settings:', error);
+        return { ativo: false, titulo: '', mensagem: '', botaoTexto: '', botaoLink: '', versao: 1, imagemUrl: '' };
+    }
+}
+
+export async function savePopupSettings(formData: FormData) {
+    try {
+        const { getStorage } = await import('firebase-admin/storage');
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const app = await initAdmin();
+        const db  = getFirestore(app);
+
+        const docRef  = db.collection('settings').doc('global');
+        const current = ((await docRef.get()).data() || {}) as Record<string, unknown>;
+        const prev    = (current.popup as Record<string, unknown>) || {};
+
+        const ativo      = formData.get('ativo')           === 'on';
+        const titulo     = (formData.get('popupTitulo')     as string) || '';
+        const mensagem   = (formData.get('popupMensagem')   as string) || '';
+        const botaoTexto = (formData.get('popupBotaoTexto') as string) || '';
+        const botaoLink  = (formData.get('popupBotaoLink')  as string) || '';
+        const imagem     = formData.get('popupImagem')      as File;
+
+        const popup: Record<string, unknown> = {
+            ...prev,
+            ativo, titulo, mensagem, botaoTexto, botaoLink,
+            versao: ((prev.versao as number) || 0) + 1,
+        };
+
+        if (imagem && imagem.size > 0) {
+            if (!imagem.type.startsWith('image/')) throw new Error('Apenas imagens são aceitas');
+            const bucket   = getStorage(app).bucket();
+            const ext      = (imagem.name.split('.').pop() || 'jpg').toLowerCase();
+            const filename = `popup/popup-${Date.now()}.${ext}`;
+            await bucket.file(filename).save(Buffer.from(await imagem.arrayBuffer()), { metadata: { contentType: imagem.type } });
+            popup.imagemUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+        }
+
+        await docRef.set({ popup }, { merge: true });
+        revalidatePath('/');
+        return { success: true, message: 'Popup atualizado com sucesso!' };
+    } catch (error) {
+        console.error('Error saving popup settings:', error);
+        return { success: false, message: error instanceof Error ? error.message : 'Erro ao salvar.' };
+    }
+}
+
 export async function saveThemeSettings(formData: FormData) {
     try {
         const { getFirestore } = await import('firebase-admin/firestore');

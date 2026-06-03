@@ -58,6 +58,7 @@ export const metadata: Metadata = {
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { GlobalThemeWrapper } from "@/components/global-theme-wrapper";
+import SitePopup from "@/components/features/SitePopup";
 
 export default function RootLayout({
     children,
@@ -81,6 +82,7 @@ export default function RootLayout({
                     <GlobalThemeWrapper>
                         <Header />
                         {children}
+                        <SitePopup />
                         <WhatsAppWidget />
                     </GlobalThemeWrapper>
                 </ThemeProvider>
