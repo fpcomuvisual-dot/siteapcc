@@ -28,6 +28,9 @@ function normalizeNewsDoc(id: string, d: Record<string, any>) {
         resumo: d.resumo ?? '',
         conteudo: d.conteudo ?? '',
         imagem: d.imagem ?? '',
+        galeria: Array.isArray(d.galeria)
+            ? d.galeria.filter((item: any) => typeof item === 'string')
+            : [],
         createdAt: d.createdAt ?? '',
         // campos extras do WordPress (preservados se existirem)
         ...(d.wpId !== undefined && { wpId: d.wpId }),
@@ -62,6 +65,8 @@ export async function createNewsItem(formData: FormData) {
         const date = formData.get('date') as string;
         const content = formData.get('content') as string;
         const image = formData.get('image') as File;
+        const galleryFiles = formData.getAll('galeria')
+            .filter((item): item is File => item instanceof File && item.size > 0);
 
         if (!image || image.size === 0) {
             throw new Error('Image is required');
@@ -78,9 +83,22 @@ export async function createNewsItem(formData: FormData) {
             },
         });
 
-        // Buckets novos usam acesso uniforme: makePublic() falha.
-        // Conceda leitura pública uma vez no console: IAM → allUsers → Storage Object Viewer
         const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+
+        // 1b. Upload gallery images (opcional)
+        const galleryUrls: string[] = [];
+        for (let i = 0; i < galleryFiles.length; i += 1) {
+            const file = galleryFiles[i];
+            if (!file.type.startsWith('image/')) {
+                throw new Error('Apenas imagens são aceitas na galeria');
+            }
+            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '') || `image-${i}.jpg`;
+            const galleryFilename = `news/galeria/${Date.now()}-${i}-${safeName}`;
+            const galleryFileRef = bucket.file(galleryFilename);
+            const galleryBuffer = Buffer.from(await file.arrayBuffer());
+            await galleryFileRef.save(galleryBuffer, { metadata: { contentType: file.type } });
+            galleryUrls.push(`https://storage.googleapis.com/${bucket.name}/${galleryFilename}`);
+        }
 
         // 2. Save to Firestore
         await db.collection('news').add({
@@ -91,6 +109,7 @@ export async function createNewsItem(formData: FormData) {
             resumo: content.substring(0, 150) + '...',
             conteudo: content,
             imagem: publicUrl,
+            galeria: galleryUrls,
             createdAt: new Date().toISOString()
         });
 

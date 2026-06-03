@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Calendar, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CoverImage } from '@/components/features/CoverImage';
+import { NewsGallery } from '@/components/features/NewsGallery';
 import sanitizeHtml from 'sanitize-html';
 
 export const revalidate = 60;
@@ -100,6 +101,9 @@ export default async function NoticiaPage({ params }: Props) {
     const dataStr   = safeDate(noticia.data);
     const imagem    = isValidHttpUrl(noticia.imagem) ? String(noticia.imagem) : '';
     const resumo    = String(noticia.resumo ?? '');
+    const galeria   = Array.isArray(noticia.galeria)
+        ? noticia.galeria.filter((item): item is string => typeof item === 'string' && isValidHttpUrl(item))
+        : [];
     const cleanHtml = safeHtml(noticia.conteudo);
 
     return (
@@ -164,6 +168,12 @@ export default async function NoticiaPage({ params }: Props) {
                     <p className="text-muted-foreground italic text-center py-12">
                         Conteúdo não disponível.
                     </p>
+                )}
+
+                {galeria.length > 0 && (
+                    <div className="mt-16">
+                        <NewsGallery images={galeria} />
+                    </div>
                 )}
 
                 {/* Rodapé do artigo */}

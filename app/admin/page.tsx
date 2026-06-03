@@ -29,11 +29,19 @@ export default function AdminDashboard() {
     const [activeSection, setActiveSection] = useState('materias')
     const [newsCount, setNewsCount] = useState<number | null>(null)
     const [docsCount, setDocsCount] = useState<number | null>(null)
+    const [galleryFiles, setGalleryFiles] = useState<File[]>([])
+    const [galleryPreviews, setGalleryPreviews] = useState<string[]>([])
 
     useEffect(() => {
         getAllNewsItems().then(n => setNewsCount((n as any[]).length))
         getTransparencyDocs().then(d => setDocsCount((d as any[]).length))
     }, [])
+
+    useEffect(() => {
+        const urls = galleryFiles.map(file => URL.createObjectURL(file))
+        setGalleryPreviews(urls)
+        return () => urls.forEach(URL.revokeObjectURL)
+    }, [galleryFiles])
 
     async function handleAnalyze(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -141,11 +149,15 @@ export default function AdminDashboard() {
                                         e.preventDefault()
                                         setAnalyzing(true)
                                         const formData = new FormData(e.currentTarget)
+                                        formData.delete('galeria')
+                                        galleryFiles.forEach((file) => formData.append('galeria', file))
                                         const result = await createNewsItem(formData)
                                         setAnalyzing(false)
                                         if (result.success) {
                                             alert(result.message);
                                             (e.target as HTMLFormElement).reset()
+                                            setGalleryFiles([])
+                                            setGalleryPreviews([])
                                             const preview = document.getElementById('preview-image')
                                             if (preview) preview.setAttribute('src', '')
                                             document.getElementById('upload-placeholder')?.classList.remove('hidden')
@@ -217,6 +229,45 @@ export default function AdminDashboard() {
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="grid gap-2">
+                                            <Label className="text-slate-700">Fotos da Galeria <span className="text-slate-500 text-sm">(opcional)</span></Label>
+                                            <input
+                                                type="file"
+                                                name="galeria"
+                                                accept="image/*"
+                                                multiple
+                                                onChange={(e) => {
+                                                    const files = Array.from(e.target.files ?? []).filter((file) => file.type.startsWith('image/'))
+                                                    if (files.length > 0) {
+                                                        setGalleryFiles((prev) => [...prev, ...files])
+                                                    }
+                                                    e.target.value = ''
+                                                }}
+                                                className="block w-full text-sm text-slate-700 file:border-2 file:border-dashed file:border-slate-300 file:bg-slate-50 file:px-4 file:py-3 file:rounded-lg file:text-sm file:font-medium hover:file:border-slate-400"
+                                            />
+                                            <p className="text-xs text-slate-400">Selecione várias imagens para a galeria da notícia. Não afeta a capa.</p>
+                                        </div>
+                                        {galleryPreviews.length > 0 && (
+                                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                                {galleryPreviews.map((preview, index) => (
+                                                    <div key={preview} className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                                                        <div className="relative h-40 w-full">
+                                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                            <img src={preview} alt={`Preview galeria ${index + 1}`} className="h-full w-full object-cover" />
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setGalleryFiles((prev) => prev.filter((_, i) => i !== index))}
+                                                            className="absolute right-2 top-2 rounded-full bg-slate-950/80 p-1 text-white transition hover:bg-slate-900"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="grid gap-2">
                                         <Label className="text-slate-700">Conteúdo da Matéria</Label>
