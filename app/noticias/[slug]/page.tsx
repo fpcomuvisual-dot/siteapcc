@@ -156,7 +156,7 @@ export default async function NoticiaPage({ params }: Props) {
                     <div
                         className="prose prose-lg max-w-none
                             prose-headings:font-black prose-headings:text-foreground
-                            prose-p:text-foreground/80 prose-p:leading-relaxed
+                            prose-p:text-foreground/80 prose-p:leading-relaxed prose-p:text-justify
                             prose-a:text-primary prose-a:font-medium prose-a:no-underline hover:prose-a:underline
                             prose-strong:text-foreground prose-strong:font-bold
                             prose-blockquote:border-primary prose-blockquote:text-muted-foreground

@@ -23,16 +23,19 @@ export function CoverImage({ src, alt, categoria }: Props) {
     }
 
     return (
-        <div className="relative w-full h-56 md:h-80 rounded-2xl overflow-hidden mb-10 shadow-xl">
-            <Image
-                src={src}
-                alt={alt}
-                fill
-                className="object-cover"
-                priority
-                onError={() => setFailed(true)}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+        <div className="w-full mx-auto mb-10 max-w-2xl">
+            <div className="relative w-full h-auto rounded-2xl overflow-hidden shadow-xl">
+                <Image
+                    src={src}
+                    alt={alt}
+                    width={800}
+                    height={600}
+                    className="w-full h-auto object-contain max-h-[600px]"
+                    priority
+                    onError={() => setFailed(true)}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+            </div>
         </div>
     )
 }
