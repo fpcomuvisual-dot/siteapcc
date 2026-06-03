@@ -13,6 +13,12 @@ const nextConfig = {
         ],
     },
 
+    experimental: {
+        serverActions: {
+            bodySizeLimit: '15mb',
+        },
+    },
+
     compress: true,
     poweredByHeader: false,
     generateEtags: true,

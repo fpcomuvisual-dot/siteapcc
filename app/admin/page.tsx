@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import imageCompression from 'browser-image-compression'
 import {
     analyzeDocument, saveThemeSettings, createNewsItem,
     createTransparencyDoc, getTransparencyDocs, deleteTransparencyDoc,
@@ -31,6 +32,8 @@ export default function AdminDashboard() {
     const [docsCount, setDocsCount] = useState<number | null>(null)
     const [galleryFiles, setGalleryFiles] = useState<File[]>([])
     const [galleryPreviews, setGalleryPreviews] = useState<string[]>([])
+    const [publishingError, setPublishingError] = useState<string | null>(null)
+    const [publishingSuccess, setPublishingSuccess] = useState<string | null>(null)
 
     useEffect(() => {
         getAllNewsItems().then(n => setNewsCount((n as any[]).length))
@@ -147,28 +150,75 @@ export default function AdminDashboard() {
                                 <form
                                     onSubmit={async (e) => {
                                         e.preventDefault()
+                                        setPublishingError(null)
+                                        setPublishingSuccess(null)
                                         setAnalyzing(true)
-                                        const formData = new FormData(e.currentTarget)
-                                        formData.delete('galeria')
-                                        galleryFiles.forEach((file) => formData.append('galeria', file))
-                                        const result = await createNewsItem(formData)
-                                        setAnalyzing(false)
-                                        if (result.success) {
-                                            alert(result.message);
-                                            (e.target as HTMLFormElement).reset()
-                                            setGalleryFiles([])
-                                            setGalleryPreviews([])
-                                            const preview = document.getElementById('preview-image')
-                                            if (preview) preview.setAttribute('src', '')
-                                            document.getElementById('upload-placeholder')?.classList.remove('hidden')
-                                            document.getElementById('preview-container')?.classList.add('hidden')
-                                            getAllNewsItems().then(n => setNewsCount((n as any[]).length))
-                                        } else {
-                                            alert(result.message)
+
+                                        try {
+                                            const formData = new FormData(e.currentTarget)
+                                            
+                                            // Compress cover image
+                                            const coverInput = e.currentTarget.querySelector('input[name="image"]') as HTMLInputElement
+                                            if (coverInput?.files?.[0]) {
+                                                const coverFile = coverInput.files[0]
+                                                const compressedCover = await imageCompression(coverFile, {
+                                                    maxSizeMB: 1,
+                                                    maxWidthOrHeight: 1920,
+                                                    useWebWorker: true,
+                                                })
+                                                formData.set('image', compressedCover, compressedCover.name)
+                                            }
+
+                                            // Compress gallery images
+                                            formData.delete('galeria')
+                                            for (const galleryFile of galleryFiles) {
+                                                const compressedGallery = await imageCompression(galleryFile, {
+                                                    maxSizeMB: 1,
+                                                    maxWidthOrHeight: 1920,
+                                                    useWebWorker: true,
+                                                })
+                                                formData.append('galeria', compressedGallery, compressedGallery.name)
+                                            }
+
+                                            const result = await createNewsItem(formData)
+                                            
+                                            if (result.success) {
+                                                setPublishingSuccess(result.message)
+                                                setTimeout(() => {
+                                                    (e.target as HTMLFormElement).reset()
+                                                    setGalleryFiles([])
+                                                    setGalleryPreviews([])
+                                                    const preview = document.getElementById('preview-image')
+                                                    if (preview) preview.setAttribute('src', '')
+                                                    document.getElementById('upload-placeholder')?.classList.remove('hidden')
+                                                    document.getElementById('preview-container')?.classList.add('hidden')
+                                                    getAllNewsItems().then(n => setNewsCount((n as any[]).length))
+                                                    setPublishingSuccess(null)
+                                                }, 2000)
+                                            } else {
+                                                setPublishingError(result.message || 'Erro ao publicar matéria')
+                                            }
+                                        } catch (error) {
+                                            const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao publicar'
+                                            setPublishingError(errorMessage)
+                                            console.error('[Admin] Erro ao publicar matéria:', error)
+                                        } finally {
+                                            setAnalyzing(false)
                                         }
                                     }}
                                     className="space-y-6"
                                 >
+                                    {publishingError && (
+                                        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                                            <p className="font-medium">❌ Erro ao publicar</p>
+                                            <p className="text-red-600">{publishingError}</p>
+                                        </div>
+                                    )}
+                                    {publishingSuccess && (
+                                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+                                            <p className="font-medium">✅ {publishingSuccess}</p>
+                                        </div>
+                                    )}
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <div className="space-y-4">
                                             <div className="grid gap-2">
@@ -276,7 +326,7 @@ export default function AdminDashboard() {
                                     <div className="flex justify-end pt-4 border-t border-slate-100">
                                         <Button disabled={analyzing} className="bg-purple-600 hover:bg-purple-700 text-white gap-2">
                                             {analyzing ? <Sparkles className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                                            {analyzing ? 'Publicando...' : 'Publicar Matéria'}
+                                            {analyzing ? 'Otimizando imagens...' : 'Publicar Matéria'}
                                         </Button>
                                     </div>
                                 </form>
@@ -424,6 +474,19 @@ function HeroEditor() {
         e.preventDefault()
         setSaving(true)
         const formData = new FormData(e.currentTarget)
+        
+        // Compress hero image if provided
+        const heroInput = e.currentTarget.querySelector('input[name="imagem"]') as HTMLInputElement
+        if (heroInput?.files?.[0]) {
+            const heroFile = heroInput.files[0]
+            const compressedHero = await imageCompression(heroFile, {
+                maxSizeMB: 2,
+                maxWidthOrHeight: 1920,
+                useWebWorker: true,
+            })
+            formData.set('imagem', compressedHero, compressedHero.name)
+        }
+        
         const result = await saveHeroSettings(formData)
         setSaving(false)
         if (result.success) {
@@ -511,6 +574,19 @@ function PopupEditor() {
         setSaving(true)
         const formData = new FormData(e.currentTarget)
         if (ativo) formData.set('ativo', 'on')
+        
+        // Compress popup image if provided
+        const popupInput = e.currentTarget.querySelector('input[name="popupImagem"]') as HTMLInputElement
+        if (popupInput?.files?.[0]) {
+            const popupFile = popupInput.files[0]
+            const compressedPopup = await imageCompression(popupFile, {
+                maxSizeMB: 1,
+                maxWidthOrHeight: 1920,
+                useWebWorker: true,
+            })
+            formData.set('popupImagem', compressedPopup, compressedPopup.name)
+        }
+        
         const result = await savePopupSettings(formData)
         setSaving(false)
         alert(result.message)

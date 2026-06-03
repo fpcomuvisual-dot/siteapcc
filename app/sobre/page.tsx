@@ -74,10 +74,9 @@ export default function SobrePage() {
                         transition={{ duration: 0.6 }}
                     >
                         <div className="relative h-[500px] w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-white shadow-primary/20">
-                            {/* Using the 30 years logo or main image found */}
                             <Image
-                                src="https://apccppta.com.br/wp-content/uploads/2020/10/cropped-logo-30-anos.png"
-                                alt="APCC 30 Anos"
+                                src="/images/31-apcc.png"
+                                alt="APCC 31 Anos"
                                 fill
                                 className="object-contain bg-white p-8"
                             />
