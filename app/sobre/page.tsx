@@ -96,16 +96,26 @@ export default function SobrePage() {
                         </h2>
                         <div className="prose prose-lg text-muted-foreground">
                             <p>
-                                A Associação Paraguaçuense de Combate ao Câncer surgiu a partir de uma entidade voluntária que abrange o Estado de São Paulo.
-                                No entanto, com o crescente número de pacientes carentes em nossa região, os recursos destinados tornaram-se insuficientes.
+                                A HISTÓRIA DA ASSOCIAÇÃO PARAGUAÇUENSE DE COMBATE AO CÂNCER
+                                A Associação Paraguaçuense de Combate ao Câncer surgiu a partir de uma entidade voluntária que abrange o Estado de São Paulo, cuja fundadora foi a jornalista Carmen Prudente, esposa do médico Antônio Prudente, que inspirou a fundação da Rede Feminina de Combate ao Câncer, em Paraguaçu Paulista. Essa entidade prestou inúmeros serviços de grande relevância para toda a comunidade do Estado de São Paulo.
                             </p>
                             <p>
-                                Foi então que decidimos criar uma força local. Uma janela aberta para a vida.
-                                Somos uma Entidade Filantrópica, sem fins lucrativos, guiada pelo amor e pela satisfação em promover o bem-estar.
+                                No entanto, com o crescente número de pacientes carentes no Estado, os recursos destinados aos doentes de Paraguaçu Paulista tornaram-se insuficientes para atender à demanda do momento. Buscando uma solução, Paraguaçu Paulista, através de um grupo de voluntárias atuantes, lutaram para formar uma nova entidade, independente, com o objetivo de acolher todos os pacientes carentes portadores de câncer da cidade.
                             </p>
                             <p>
-                                Nosso trabalho é embasado por um Estatuto Social e Regimento Interno, com transparência e seriedade.
-                                Oferecemos assistência alimentar, medicamentos e, principalmente, apoio humano para quem enfrenta o câncer.
+                                Nosso objetivo principal é contribuir com informações de prevenção e combate ao câncer, oferecendo assistência material e social, bem como cuidados no tratamento domiciliar adequado a cada indivíduo conforme sua necessidade, conscientizando assim a população paraguaçuense.
+                            </p>
+                            <p>
+                                A Associação Paraguaçuense de Combate ao Câncer é uma Entidade Filantrópica, com o lema “Uma Janela Aberta para a Vida”, sem caráter político, social ou religioso, que há 30 anos presta serviços assistenciais e educativos aos pacientes carentes através do trabalho voluntário de pessoas da comunidade.
+                            </p>
+                            <p>
+                                Na prática, a entidade realiza com amor, satisfação e promove o bem-estar, prevendo ações que busquem qualificar o auxílio prestado. A sensibilidade e a empatia são valores que movem diariamente as atitudes de atendimento. As ações feitas pela entidade ajudam muito os pacientes e seus familiares.
+                            </p>
+                            <p>
+                                A entidade é embasada e regulamentada por um Estatuto Social, um Regimento Interno e é constituída hierarquicamente e representada por um presidente, seu vice, primeiro e segundo secretário, primeiro e segundo tesoureiro, o conselho fiscal, a gestão é eleita pelo quadro de voluntários e tem durabilidade de dois anos. É importante ressaltar que “são os sócios contribuintes que sustentam a entidade”, mas esta também recebe recursos financeiros da Prefeitura Municipal através de convênios e emendas parlamentares indicadas pelos vereadores.
+                            </p>
+                            <p>
+                                A entidade fica aberta de segunda a sexta-feira das 8:00 às 18:00 horas, com plantão de atendimento presencial e humanizado às pessoas portadoras de câncer, e de 9:00 às 11:00 horas, e das 14:00 às 16:00 horas, organizado e recebido pelas voluntárias.
                             </p>
                         </div>
 
