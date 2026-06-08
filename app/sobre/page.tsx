@@ -22,20 +22,27 @@ const staggerContainer = {
 };
 
 const volunteers = [
-    { name: "Maria Regina Alfredo Plazza", img: "https://apccppta.com.br/wp-content/uploads/2022/09/France.png" }, // Placeholder mapping based on list, using available URLs
-    { name: "Francelina Gonçalves Matheus", img: "https://apccppta.com.br/wp-content/uploads/2022/09/Foto-France-Quadrado.png" },
-    { name: "Silvia Barbosa de Sá Pinheiro", img: "https://apccppta.com.br/wp-content/uploads/2022/09/Silvia.png" },
-    { name: "Márcia Regina Deperon", img: "https://apccppta.com.br/wp-content/uploads/2022/09/Marcia.png" },
-    { name: "Maria de Lourdes Santos Bertolla", img: "https://apccppta.com.br/wp-content/uploads/2022/09/Lourdes.png" },
-    { name: "Mara Rosana Peralta Romeiro", img: "https://apccppta.com.br/wp-content/uploads/2022/09/Mara.png" },
-    { name: "Maria Cuerin Parisotto", img: "https://apccppta.com.br/wp-content/uploads/2022/09/Maria.png" },
-    { name: "Maria Antônia Aliotti de Lima", img: "https://apccppta.com.br/wp-content/uploads/2022/09/Maria-Antonia.png" },
-    { name: "Marlei Regina da Luz Durães", img: "https://apccppta.com.br/wp-content/uploads/2022/09/Marlei.png" },
-    { name: "Matilde Ribeiro de Melo", img: "https://apccppta.com.br/wp-content/uploads/2022/09/Matilde.png" },
-    { name: "Neide Aparecida Teodoro de Lima", img: "https://apccppta.com.br/wp-content/uploads/2022/09/Neide.png" },
-    { name: "Oclesia Maria Maróstica Hortal", img: "https://apccppta.com.br/wp-content/uploads/2022/09/Oclesia.png" },
-    { name: "Cidinha", img: "https://apccppta.com.br/wp-content/uploads/2022/09/Cidinha.png" },
-    // Adding generic placeholders for others listed but without explicit matching filname found in main scrape list immediately
+    { name: "Francelina Gonçalves Matheus", role: "Fundadora", img: "/wp-content/uploads/2022/09/Foto-France-Quadrado.png" },
+    { name: "Márcia Regina Deperon", role: "Atual Presidente", img: "/wp-content/uploads/2022/09/Marcia.png" },
+    { name: "Maria Regina Plaza", img: "/wp-content/uploads/2022/09/France.png" },
+    { name: "Silvia Barbosa de Sá Pinheiro", img: "/wp-content/uploads/2022/09/Silvia.png" },
+    { name: "Maria de Lourdes Santos Bertolla", img: "/wp-content/uploads/2022/09/Lourdes.png" },
+    { name: "Mara Rosana Peralta Romeiro", img: "/wp-content/uploads/2022/09/Mara.png" },
+    { name: "Maria Cuerin Parisotto", img: "/wp-content/uploads/2022/09/Maria.png" },
+    { name: "Maria Antônia Aliotti de Lima", img: "/wp-content/uploads/2022/09/Maria-Antonia.png" },
+    { name: "Marlei Regina da Luz Durães", img: "/wp-content/uploads/2022/09/Marlei.png" },
+    { name: "Matilde Ribeiro de Melo", img: "/wp-content/uploads/2022/09/Matilde.png" },
+    { name: "Oclesia Maria Maróstica Hortal", img: "/wp-content/uploads/2022/09/Oclesia.png" },
+    { name: "Aparecida de Jesus Tomazini Pelegrini", img: "/wp-content/uploads/2022/09/Cidinha.png" },
+    { name: "Ana Luiza Henrique da Silva", img: "/voluntarios/" + encodeURIComponent("Ana Luiza Henrique da Silva.png") },
+    { name: "Aparecida de Jesus Tomazini Pelegrini", img: "/voluntarios/" + encodeURIComponent("Aparecida de Jesus Tomazini Pelegrini.png") },
+    { name: "Eliane Cardozo Salum", img: "/voluntarios/" + encodeURIComponent("Eliane Cardozo Salum.png") },
+    { name: "Fatima AP. Moreira Lacerda", img: "/voluntarios/" + encodeURIComponent("Fatima AP. Moreira Lacerda.png") },
+    { name: "Fernanda Santos Hipólito Ferreira", img: "/voluntarios/" + encodeURIComponent("Fernanda Santos Hipólito Ferreira.png") },
+    { name: "Magali Pangoni Soares", img: "/voluntarios/" + encodeURIComponent("Magali Pangoni Soares.png") },
+    { name: "Maria Carolina Casanova", img: "/voluntarios/" + encodeURIComponent("Maria Carolina Casanova.png") },
+    { name: "Sander Figueiredo Salum", img: "/voluntarios/" + encodeURIComponent("Sander Figueiredo Salum.png") },
+    { name: "Silvia Affini Jorge", img: "/voluntarios/" + encodeURIComponent("Silvia Affini Jorge.png") },
 ];
 
 export default function SobrePage() {
@@ -165,7 +172,7 @@ export default function SobrePage() {
                                     </div>
                                     <CardContent className="p-4">
                                         <h3 className="font-bold text-foreground text-sm md:text-base">{vol.name}</h3>
-                                        <p className="text-xs text-primary mt-1">Voluntário(a)</p>
+                                        <p className="text-xs text-primary mt-1">{vol.role ?? "Voluntário(a)"}</p>
                                     </CardContent>
                                 </Card>
                             </motion.div>
