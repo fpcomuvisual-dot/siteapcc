@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import imageCompression from 'browser-image-compression'
+import * as XLSX from 'xlsx'
 import {
     analyzeDocument, saveThemeSettings, createNewsItem,
     createTransparencyDoc, getTransparencyDocs, deleteTransparencyDoc,
@@ -19,7 +20,7 @@ import {
     LayoutDashboard, Settings, Sparkles, Menu, Calendar, Trash2, Plus, Shield,
     Image as ImageIcon, Megaphone, Eye, EyeOff, Users, Pencil, GripVertical,
     // Lojinha Icons:
-    ShoppingBag, Package, History, DollarSign, Undo2, ArrowDownLeft, ArrowUpRight, Tag, Coins
+    ShoppingBag, Package, History, DollarSign, Undo2, ArrowDownLeft, ArrowUpRight, Tag, Coins, FileSpreadsheet
 } from 'lucide-react'
 import { createCalendarEvent, getCalendarEvents, deleteCalendarEvent } from './actions'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -1374,6 +1375,8 @@ function LojinhaManager() {
     const [filtroTipo, setFiltroTipo] = useState('todos')
     const [filtroProdId, setFiltroProdId] = useState('todos')
     const [filtroVendedora, setFiltroVendedora] = useState('')
+    const [filtroDataInicio, setFiltroDataInicio] = useState('')
+    const [filtroDataFim, setFiltroDataFim] = useState('')
 
     const carregarDados = async () => {
         setLoading(true)
@@ -1420,6 +1423,253 @@ function LojinhaManager() {
             setVendaVendedora('site')
         }
     }, [vendaOrigem, vendaConsignacaoId, consignacoes])
+
+    const exportarPlanilha = () => {
+        try {
+            // 1. Aba 1 - Estoque atual
+            const estoqueData: any[] = []
+            produtos.forEach((p: any) => {
+                const tamanhos = p.tamanhos || []
+                tamanhos.forEach((t: any) => {
+                    estoqueData.push({
+                        "Produto": p.nome,
+                        "Cor": p.cor || "",
+                        "Tamanho": t.tamanho,
+                        "Quantidade em estoque (central)": t.quantidade,
+                        "Preço": p.preco,
+                        "Ativo": p.ativo ? "Sim" : "Não"
+                    })
+                })
+            })
+
+            // 2. Aba 2 - Saldo vendedoras
+            const saldoVendedorasData: any[] = []
+            
+            // Ordenar as consignações: abertas primeiro (das mais novas para as mais antigas), devolvidas depois
+            const consignacoesOrdenadas = [...consignacoes].sort((a: any, b: any) => {
+                if (a.status === 'aberta' && b.status !== 'aberta') return -1;
+                if (a.status !== 'aberta' && b.status === 'aberta') return 1;
+                const dateA = new Date(a.createdAt || 0).getTime();
+                const dateB = new Date(b.createdAt || 0).getTime();
+                return dateB - dateA;
+            });
+
+            consignacoesOrdenadas.forEach((cons: any) => {
+                const prod = produtos.find((p: any) => p.id === cons.produtoId)
+                const preco = prod ? prod.preco : 0
+                
+                const tamanhosSet = new Set([
+                    ...(cons.itensLevados || []).map((i: any) => i.tamanho),
+                    ...(cons.itens || []).map((i: any) => i.tamanho)
+                ])
+                
+                tamanhosSet.forEach((tamanho: any) => {
+                    const itemLevou = (cons.itensLevados || []).find((i: any) => i.tamanho === tamanho)
+                    const levou = itemLevou ? itemLevou.quantidade : 0
+                    
+                    const itemAtual = (cons.itens || []).find((i: any) => i.tamanho === tamanho)
+                    const saldoAtual = itemAtual ? itemAtual.quantidade : 0
+                    
+                    const vendeu = movimentacoes
+                        .filter((m: any) => m.tipo === 'venda' && m.consignacaoId === cons.id)
+                        .reduce((acc: number, m: any) => {
+                            const item = (m.itens || []).find((i: any) => i.tamanho === tamanho)
+                            return acc + (item ? item.quantidade : 0)
+                        }, 0)
+                        
+                    const devolveu = movimentacoes
+                        .filter((m: any) => m.tipo === 'devolucao' && m.consignacaoId === cons.id)
+                        .reduce((acc: number, m: any) => {
+                            const item = (m.itens || []).find((i: any) => i.tamanho === tamanho)
+                            return acc + (item ? item.quantidade : 0)
+                        }, 0)
+                        
+                    const valorSaldo = saldoAtual * preco
+                    
+                    saldoVendedorasData.push({
+                        "Vendedora": cons.vendedora,
+                        "Produto": cons.produtoNome,
+                        "Tamanho": tamanho,
+                        "Levou": levou,
+                        "Vendeu": vendeu,
+                        "Devolveu": devolveu,
+                        "Saldo atual": saldoAtual,
+                        "Valor do saldo": valorSaldo,
+                        "Status": cons.status === 'aberta' ? 'Em Aberto' : 'Devolvida'
+                    })
+                })
+            })
+
+            // 3. Aba 3 - Vendas (filtrado por período)
+            const vendasData: any[] = []
+            let totalQtdVendas = 0
+            let totalValorVendas = 0
+
+            const vendasFiltradas = movimentacoes.filter((m: any) => {
+                if (m.tipo !== 'venda') return false
+                
+                const dataMov = new Date(m.data || m.createdAt).getTime()
+                if (filtroDataInicio) {
+                    const dataInicio = new Date(filtroDataInicio + 'T00:00:00').getTime()
+                    if (dataMov < dataInicio) return false
+                }
+                if (filtroDataFim) {
+                    const dataFim = new Date(filtroDataFim + 'T23:59:59').getTime()
+                    if (dataMov > dataFim) return false
+                }
+                return true
+            })
+
+            vendasFiltradas.forEach((m: any) => {
+                const dataFormatada = new Date(m.data || m.createdAt).toLocaleDateString('pt-BR')
+                const prod = produtos.find((p: any) => p.id === m.produtoId)
+                const precoUnitario = prod ? prod.preco : 0
+                
+                ;(m.itens || []).forEach((item: any) => {
+                    const valorItem = item.quantidade * precoUnitario
+                    totalQtdVendas += item.quantidade
+                    totalValorVendas += valorItem
+                    
+                    vendasData.push({
+                        "Data": dataFormatada,
+                        "Produto": m.produtoNome,
+                        "Tamanho": item.tamanho,
+                        "Quantidade": item.quantidade,
+                        "Valor": valorItem,
+                        "Origem (central/consignado)": m.origem || 'central',
+                        "Vendedora": m.vendedora || (m.origem === 'central' ? 'site' : ''),
+                        "Responsável": m.responsavel || ''
+                    })
+                })
+            })
+
+            vendasData.push({
+                "Data": "TOTAL",
+                "Produto": "",
+                "Tamanho": "",
+                "Quantidade": totalQtdVendas,
+                "Valor": totalValorVendas,
+                "Origem (central/consignado)": "",
+                "Vendedora": "",
+                "Responsável": ""
+            })
+
+            // 4. Aba 4 - Extrato completo (filtrado por período)
+            const extratoData: any[] = []
+            
+            const extratoFiltrado = movimentacoes.filter((m: any) => {
+                const dataMov = new Date(m.data || m.createdAt).getTime()
+                if (filtroDataInicio) {
+                    const dataInicio = new Date(filtroDataInicio + 'T00:00:00').getTime()
+                    if (dataMov < dataInicio) return false
+                }
+                if (filtroDataFim) {
+                    const dataFim = new Date(filtroDataFim + 'T23:59:59').getTime()
+                    if (dataMov > dataFim) return false
+                }
+                return true
+            })
+
+            const movsOrdenadas = [...extratoFiltrado].sort((a: any, b: any) => {
+                const dateA = new Date(a.data || a.createdAt).getTime()
+                const dateB = new Date(b.data || b.createdAt).getTime()
+                return dateA - dateB
+            })
+
+            movsOrdenadas.forEach((m: any) => {
+                const dataFormatada = new Date(m.data || m.createdAt).toLocaleDateString('pt-BR') + ' ' + new Date(m.data || m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                const prod = produtos.find((p: any) => p.id === m.produtoId)
+                const precoUnitario = prod ? prod.preco : 0
+                
+                ;(m.itens || []).forEach((item: any) => {
+                    const valorItem = m.tipo === 'venda' ? (item.quantidade * precoUnitario) : ""
+                    
+                    extratoData.push({
+                        "Data": dataFormatada,
+                        "Tipo": m.tipo.toUpperCase(),
+                        "Produto": m.produtoNome,
+                        "Tamanho": item.tamanho,
+                        "Quantidade": item.quantidade,
+                        "Origem": m.origem || 'central',
+                        "Vendedora": m.vendedora || (m.origem === 'central' && m.tipo === 'venda' ? 'site' : ''),
+                        "Valor": valorItem,
+                        "Responsável": m.responsavel || '',
+                        "Observação": m.observacao || ''
+                    })
+                })
+            })
+
+            // Criar workbook
+            const wb = XLSX.utils.book_new()
+            
+            const wsEstoque = XLSX.utils.json_to_sheet(estoqueData)
+            const wsSaldo = XLSX.utils.json_to_sheet(saldoVendedorasData)
+            const wsVendas = XLSX.utils.json_to_sheet(vendasData)
+            const wsExtrato = XLSX.utils.json_to_sheet(extratoData)
+
+            const autofitColumns = (ws: XLSX.WorkSheet) => {
+                if (!ws['!ref']) return
+                const range = XLSX.utils.decode_range(ws['!ref'])
+                const colsWidth = []
+                for (let C = range.s.c; C <= range.e.c; ++C) {
+                    let maxLen = 10
+                    for (let R = range.s.r; R <= range.e.r; ++R) {
+                        const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })]
+                        if (cell && cell.v) {
+                            const len = String(cell.v).length
+                            if (len > maxLen) maxLen = len
+                        }
+                    }
+                    colsWidth.push({ wch: maxLen + 3 })
+                }
+                ws['!cols'] = colsWidth
+            }
+
+            const formatarColunasMoeda = (ws: XLSX.WorkSheet, nomesColunasMoeda: string[]) => {
+                if (!ws['!ref']) return
+                const range = XLSX.utils.decode_range(ws['!ref'])
+                const mapaColunas: Record<number, boolean> = {}
+                for (let C = range.s.c; C <= range.e.c; ++C) {
+                    const cellHeader = ws[XLSX.utils.encode_cell({ r: range.s.r, c: C })]
+                    if (cellHeader && typeof cellHeader.v === 'string' && nomesColunasMoeda.includes(cellHeader.v)) {
+                        mapaColunas[C] = true
+                    }
+                }
+                for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+                    for (let C = range.s.c; C <= range.e.c; ++C) {
+                        if (mapaColunas[C]) {
+                            const cellRef = XLSX.utils.encode_cell({ r: R, c: C })
+                            const cell = ws[cellRef]
+                            if (cell && cell.t === 'n') {
+                                cell.z = '"R$"#,##0.00'
+                            }
+                        }
+                    }
+                }
+            }
+
+            formatarColunasMoeda(wsEstoque, ["Preço"])
+            formatarColunasMoeda(wsSaldo, ["Valor do saldo"])
+            formatarColunasMoeda(wsVendas, ["Valor"])
+            formatarColunasMoeda(wsExtrato, ["Valor"])
+
+            autofitColumns(wsEstoque)
+            autofitColumns(wsSaldo)
+            autofitColumns(wsVendas)
+            autofitColumns(wsExtrato)
+
+            XLSX.utils.book_append_sheet(wb, wsEstoque, "Estoque atual")
+            XLSX.utils.book_append_sheet(wb, wsSaldo, "Saldo vendedoras")
+            XLSX.utils.book_append_sheet(wb, wsVendas, "Vendas")
+            XLSX.utils.book_append_sheet(wb, wsExtrato, "Extrato completo")
+
+            const hoje = new Date().toISOString().split('T')[0]
+            XLSX.writeFile(wb, `lojinha-apcc-${hoje}.xlsx`)
+        } catch (err) {
+            console.error("Erro ao exportar planilha:", err)
+            alert("Erro ao exportar planilha Excel.")
+        }
+    }
 
     const carregarGradePadrao = () => {
         setProdTamanhos([
@@ -1678,6 +1928,19 @@ function LojinhaManager() {
         if (filtroTipo !== 'todos' && mov.tipo !== filtroTipo) return false
         if (filtroProdId !== 'todos' && mov.produtoId !== filtroProdId) return false
         if (filtroVendedora.trim() && !mov.vendedora?.toLowerCase().includes(filtroVendedora.toLowerCase().trim())) return false
+        
+        const dataMov = new Date(mov.data || mov.createdAt).getTime()
+        
+        if (filtroDataInicio) {
+            const dataInicio = new Date(filtroDataInicio + 'T00:00:00').getTime()
+            if (dataMov < dataInicio) return false
+        }
+        
+        if (filtroDataFim) {
+            const dataFim = new Date(filtroDataFim + 'T23:59:59').getTime()
+            if (dataMov > dataFim) return false
+        }
+        
         return true
     })
 
@@ -2300,10 +2563,16 @@ function LojinhaManager() {
                                             <CardDescription>Extrato detalhado de toda movimentação realizada.</CardDescription>
                                         </div>
                                         {/* Filtros */}
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="flex flex-wrap gap-2 items-center">
+                                            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs h-9">
+                                                <span className="text-slate-400">De:</span>
+                                                <input type="date" value={filtroDataInicio} onChange={e => setFiltroDataInicio(e.target.value)} className="bg-transparent border-0 focus:outline-none text-slate-700 text-xs w-28" />
+                                                <span className="text-slate-400 ml-1">Até:</span>
+                                                <input type="date" value={filtroDataFim} onChange={e => setFiltroDataFim(e.target.value)} className="bg-transparent border-0 focus:outline-none text-slate-700 text-xs w-28" />
+                                            </div>
                                             <div className="w-32">
                                                 <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                                                    <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="Tipo" /></SelectTrigger>
+                                                    <SelectTrigger className="bg-white h-9 text-xs border-slate-200"><SelectValue placeholder="Tipo" /></SelectTrigger>
                                                     <SelectContent>
                                                         <SelectItem value="todos">Todos Tipos</SelectItem>
                                                         <SelectItem value="entrada">Entrada</SelectItem>
@@ -2316,14 +2585,17 @@ function LojinhaManager() {
                                             </div>
                                             <div className="w-40">
                                                 <Select value={filtroProdId} onValueChange={setFiltroProdId}>
-                                                    <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="Produto" /></SelectTrigger>
+                                                    <SelectTrigger className="bg-white h-9 text-xs border-slate-200"><SelectValue placeholder="Produto" /></SelectTrigger>
                                                     <SelectContent>
                                                         <SelectItem value="todos">Todos Produtos</SelectItem>
                                                         {produtos.map(p => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
-                                            <Input placeholder="Buscar Vendedora..." value={filtroVendedora} onChange={e => setFiltroVendedora(e.target.value)} className="w-36 h-9 text-xs bg-white" />
+                                            <Input placeholder="Buscar Vendedora..." value={filtroVendedora} onChange={e => setFiltroVendedora(e.target.value)} className="w-36 h-9 text-xs bg-white border-slate-200" />
+                                            <Button onClick={exportarPlanilha} className="bg-green-600 hover:bg-green-700 text-white gap-1.5 h-9 text-xs font-semibold px-3 shadow-sm transition-all shrink-0">
+                                                <FileSpreadsheet className="w-4 h-4" /> Baixar planilha (Excel)
+                                            </Button>
                                         </div>
                                     </div>
                                 </CardHeader>
