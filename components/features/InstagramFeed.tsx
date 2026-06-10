@@ -10,6 +10,7 @@
 import { Instagram, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import Script from 'next/script'
 
 const BEHOLD_FEED_ID = process.env.NEXT_PUBLIC_BEHOLD_FEED_ID
 
@@ -17,6 +18,7 @@ export default function InstagramFeed() {
     if (BEHOLD_FEED_ID) {
         return (
             <div className="w-full">
+                <Script src="https://w.behold.so/widget.js" type="module" strategy="afterInteractive" />
                 {/* @ts-ignore — Behold.so web component */}
                 <behold-widget feed-id={BEHOLD_FEED_ID} />
                 <div className="flex justify-center mt-4">
