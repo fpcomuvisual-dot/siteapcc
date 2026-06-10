@@ -105,34 +105,8 @@ export default function NoticiasEventos() {
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="w-full flex justify-center">
                         <InstagramFeed />
-
-                        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-lg shadow-muted/20">
-                            <CardHeader>
-                                <CardTitle className="text-foreground flex items-center gap-2">
-                                    <Facebook className="h-6 w-6 text-blue-600" />
-                                    Facebook
-                                </CardTitle>
-                                <CardDescription className="text-muted-foreground">
-                                    APCC Oficial
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <p className="text-gray-700">
-                                    Curta nossa página e acompanhe nossas atividades, campanhas e eventos.
-                                </p>
-                                <Button
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                                    asChild
-                                >
-                                    <a href="https://www.facebook.com/apccppta" target="_blank" rel="noopener noreferrer">
-                                        <Facebook className="mr-2 h-4 w-4" />
-                                        Curtir no Facebook
-                                    </a>
-                                </Button>
-                            </CardContent>
-                        </Card>
                     </div>
                 </motion.div>
 

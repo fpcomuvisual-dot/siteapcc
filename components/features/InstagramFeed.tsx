@@ -17,7 +17,7 @@ const BEHOLD_FEED_ID = process.env.NEXT_PUBLIC_BEHOLD_FEED_ID
 export default function InstagramFeed() {
     if (BEHOLD_FEED_ID) {
         return (
-            <div className="w-full">
+            <div className="w-full max-w-4xl mx-auto">
                 <Script src="https://w.behold.so/widget.js" type="module" strategy="afterInteractive" />
                 {/* @ts-ignore — Behold.so web component */}
                 <behold-widget feed-id={BEHOLD_FEED_ID} />
@@ -34,7 +34,7 @@ export default function InstagramFeed() {
     }
 
     return (
-        <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-pink-200">
+        <Card className="w-full max-w-xl mx-auto bg-gradient-to-br from-purple-50 to-pink-50 border-pink-200">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-purple-700">
                     <Instagram className="h-6 w-6" />
