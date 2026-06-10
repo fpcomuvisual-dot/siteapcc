@@ -65,9 +65,9 @@ export function NewsGallery({ images }: NewsGalleryProps) {
             </div>
 
             <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="p-0 shadow-2xl rounded-3xl max-w-6xl mx-auto bg-transparent">
+                <DialogContent className="p-0 shadow-2xl rounded-3xl max-w-6xl mx-auto bg-transparent border-none">
                     <DialogOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" />
-                    <div className="relative z-20 mx-auto flex max-h-[85vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl bg-slate-950 shadow-2xl">
+                    <div className="relative z-20 mx-auto flex h-[80vh] max-h-[85vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl bg-slate-950 shadow-2xl">
                         <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
                             <div>
                                 <DialogTitle className="text-base font-bold text-white">Foto {currentIndex + 1} de {images.length}</DialogTitle>

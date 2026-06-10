@@ -544,3 +544,158 @@ export async function deleteCalendarEvent(id: string) {
         return { success: false, message: 'Erro ao remover evento.' };
     }
 }
+
+// --- VOLUNTEERS ACTIONS ---
+
+export async function getVolunteers() {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+        const snapshot = await db.collection('volunteers').orderBy('ordem', 'asc').get();
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            nome: doc.data().nome ?? '',
+            role: doc.data().role ?? '',
+            imagemUrl: doc.data().imagemUrl ?? '',
+            ordem: doc.data().ordem ?? 0,
+            createdAt: doc.data().createdAt ?? '',
+        }));
+    } catch (error) {
+        console.error('Error fetching volunteers:', error);
+        return [];
+    }
+}
+
+export async function createVolunteer(formData: FormData) {
+    try {
+        const { getStorage } = await import('firebase-admin/storage');
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const app = await initAdmin();
+        const bucket = getStorage(app).bucket();
+        const db = getFirestore(app);
+
+        const nome = formData.get('nome') as string;
+        const role = (formData.get('role') as string) || 'Voluntário(a)';
+        const imagem = formData.get('imagem') as File;
+
+        if (!nome) throw new Error('Nome é obrigatório');
+        if (!imagem || imagem.size === 0) throw new Error('Foto é obrigatória');
+        if (!imagem.type.startsWith('image/')) throw new Error('Apenas imagens são aceitas');
+
+        const buffer = Buffer.from(await imagem.arrayBuffer());
+        const safeName = slugify(nome) || `vol-${Date.now()}`;
+        const ext = (imagem.name.split('.').pop() || 'png').toLowerCase();
+        const filename = `volunteers/${safeName}-${Date.now()}.${ext}`;
+        const fileRef = bucket.file(filename);
+        await fileRef.save(buffer, { metadata: { contentType: imagem.type } });
+        const imagemUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+
+        // Determinar a próxima ordem
+        const lastDoc = await db.collection('volunteers').orderBy('ordem', 'desc').limit(1).get();
+        const nextOrdem = lastDoc.empty ? 1 : ((lastDoc.docs[0].data().ordem as number) || 0) + 1;
+
+        await db.collection('volunteers').add({
+            nome,
+            role,
+            imagemUrl,
+            ordem: nextOrdem,
+            createdAt: new Date().toISOString(),
+        });
+
+        revalidatePath('/sobre');
+        revalidatePath('/admin');
+        return { success: true, message: 'Voluntário(a) adicionado(a) com sucesso!' };
+    } catch (error) {
+        console.error('Error creating volunteer:', error);
+        const msg = error instanceof Error ? error.message : 'Erro ao adicionar voluntário(a).';
+        return { success: false, message: msg };
+    }
+}
+
+export async function updateVolunteer(id: string, formData: FormData) {
+    try {
+        const { getStorage } = await import('firebase-admin/storage');
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const app = await initAdmin();
+        const db = getFirestore(app);
+
+        const nome = formData.get('nome') as string;
+        const role = (formData.get('role') as string) || 'Voluntário(a)';
+        const imagem = formData.get('imagem') as File;
+
+        if (!nome) throw new Error('Nome é obrigatório');
+
+        const update: Record<string, unknown> = {
+            nome,
+            role,
+            updatedAt: new Date().toISOString(),
+        };
+
+        // Se enviou nova foto, faz upload e deleta a antiga
+        if (imagem && imagem.size > 0) {
+            if (!imagem.type.startsWith('image/')) throw new Error('Apenas imagens são aceitas');
+
+            const bucket = getStorage(app).bucket();
+
+            // Deletar foto anterior
+            const currentDoc = await db.collection('volunteers').doc(id).get();
+            if (currentDoc.exists) {
+                const oldUrl = currentDoc.data()?.imagemUrl;
+                if (oldUrl) {
+                    try {
+                        const url = new URL(oldUrl);
+                        const filePath = decodeURIComponent(url.pathname.replace(`/${bucket.name}/`, ''));
+                        await bucket.file(filePath).delete();
+                    } catch { /* ignora se arquivo já não existir */ }
+                }
+            }
+
+            const buffer = Buffer.from(await imagem.arrayBuffer());
+            const safeName = slugify(nome) || `vol-${Date.now()}`;
+            const ext = (imagem.name.split('.').pop() || 'png').toLowerCase();
+            const filename = `volunteers/${safeName}-${Date.now()}.${ext}`;
+            await bucket.file(filename).save(buffer, { metadata: { contentType: imagem.type } });
+            update.imagemUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+        }
+
+        await db.collection('volunteers').doc(id).update(update);
+
+        revalidatePath('/sobre');
+        revalidatePath('/admin');
+        return { success: true, message: 'Voluntário(a) atualizado(a) com sucesso!' };
+    } catch (error) {
+        console.error('Error updating volunteer:', error);
+        const msg = error instanceof Error ? error.message : 'Erro ao atualizar voluntário(a).';
+        return { success: false, message: msg };
+    }
+}
+
+export async function deleteVolunteer(id: string) {
+    try {
+        const { getStorage } = await import('firebase-admin/storage');
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const app = await initAdmin();
+        const db = getFirestore(app);
+
+        const doc = await db.collection('volunteers').doc(id).get();
+        if (doc.exists) {
+            const data = doc.data();
+            if (data?.imagemUrl) {
+                try {
+                    const bucket = getStorage(app).bucket();
+                    const url = new URL(data.imagemUrl);
+                    const filePath = decodeURIComponent(url.pathname.replace(`/${bucket.name}/`, ''));
+                    await bucket.file(filePath).delete();
+                } catch { /* ignora se arquivo já não existir */ }
+            }
+            await db.collection('volunteers').doc(id).delete();
+        }
+
+        revalidatePath('/sobre');
+        revalidatePath('/admin');
+        return { success: true, message: 'Voluntário(a) removido(a).' };
+    } catch (error) {
+        console.error('Error deleting volunteer:', error);
+        return { success: false, message: 'Erro ao remover voluntário(a).' };
+    }
+}

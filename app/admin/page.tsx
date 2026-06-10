@@ -6,12 +6,13 @@ import {
     createTransparencyDoc, getTransparencyDocs, deleteTransparencyDoc,
     getAllNewsItems, saveHeroSettings, getHeroSettings,
     savePopupSettings, getPopupSettings,
+    getVolunteers, createVolunteer, updateVolunteer, deleteVolunteer,
 } from './actions'
 import { TRANSPARENCY_CATEGORIES } from '@/lib/constants'
 import {
     BarChart3, FileText, TrendingUp, Upload, Bot, CheckCircle2,
     LayoutDashboard, Settings, Sparkles, Menu, Calendar, Trash2, Plus, Shield,
-    Image as ImageIcon, Megaphone, Eye, EyeOff,
+    Image as ImageIcon, Megaphone, Eye, EyeOff, Users, Pencil,
 } from 'lucide-react'
 import { createCalendarEvent, getCalendarEvents, deleteCalendarEvent } from './actions'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -75,6 +76,7 @@ export default function AdminDashboard() {
                     <SidebarItem icon={ImageIcon} label="Editor da Hero" active={activeSection === 'hero'} onClick={() => setActiveSection('hero')} />
                     <SidebarItem icon={Megaphone} label="Popup do Site" active={activeSection === 'popup'} onClick={() => setActiveSection('popup')} />
                     <SidebarItem icon={Calendar} label="Calendário" active={activeSection === 'calendario'} onClick={() => setActiveSection('calendario')} />
+                    <SidebarItem icon={Users} label="Voluntários" active={activeSection === 'voluntarios'} onClick={() => setActiveSection('voluntarios')} />
                     <SidebarItem icon={Sparkles} label="Personalização" active={activeSection === 'personalizacao'} onClick={() => setActiveSection('personalizacao')} />
                     <SidebarItem icon={Bot} label="Ferramentas IA" active={activeSection === 'ia'} onClick={() => setActiveSection('ia')} />
                     <SidebarItem icon={Settings} label="Configurações" />
@@ -101,6 +103,7 @@ export default function AdminDashboard() {
                                     <SelectItem value="hero">Editor da Hero (imagem + texto)</SelectItem>
                                     <SelectItem value="popup">Popup do Site</SelectItem>
                                     <SelectItem value="calendario">Calendário</SelectItem>
+                                    <SelectItem value="voluntarios">Voluntários</SelectItem>
                                     <SelectItem value="personalizacao">Personalização Visual</SelectItem>
                                     <SelectItem value="ia">Ferramentas IA (Demo)</SelectItem>
                                 </SelectContent>
@@ -387,6 +390,9 @@ export default function AdminDashboard() {
 
                     {/* CALENDÁRIO */}
                     {activeSection === 'calendario' && <CalendarManager />}
+
+                    {/* VOLUNTÁRIOS */}
+                    {activeSection === 'voluntarios' && <VoluntariosManager />}
 
                     {/* IA — APENAS DEMONSTRAÇÃO */}
                     {activeSection === 'ia' && (
@@ -944,6 +950,246 @@ function CalendarManager() {
                 </div>
             </CardContent>
         </Card>
+    )
+}
+
+// ─── Gerenciador de Voluntários ───────────────────────────────────────────────
+function VoluntariosManager() {
+    const [volunteers, setVolunteers] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+    const [submitting, setSubmitting] = useState(false)
+    const [editingId, setEditingId] = useState<string | null>(null)
+    const [editNome, setEditNome] = useState('')
+    const [editRole, setEditRole] = useState('')
+    const [previewUrl, setPreviewUrl] = useState('')
+
+    async function loadVolunteers() {
+        const data = await getVolunteers()
+        setVolunteers(data as any[])
+        setLoading(false)
+    }
+
+    useEffect(() => { loadVolunteers() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+    async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault()
+        setSubmitting(true)
+        const formData = new FormData(e.currentTarget)
+
+        // Compress image
+        const imgInput = e.currentTarget.querySelector('input[name="imagem"]') as HTMLInputElement
+        if (imgInput?.files?.[0]) {
+            const compressed = await imageCompression(imgInput.files[0], {
+                maxSizeMB: 1,
+                maxWidthOrHeight: 1024,
+                useWebWorker: true,
+            })
+            formData.set('imagem', compressed, compressed.name)
+        }
+
+        const result = await createVolunteer(formData)
+        if (result.success) {
+            (e.target as HTMLFormElement).reset()
+            setPreviewUrl('')
+            await loadVolunteers()
+        }
+        alert(result.message)
+        setSubmitting(false)
+    }
+
+    async function handleUpdate(id: string) {
+        setSubmitting(true)
+        const formData = new FormData()
+        formData.set('nome', editNome)
+        formData.set('role', editRole)
+
+        // Verificar se há nova foto no input de edição
+        const editImgInput = document.getElementById(`edit-img-${id}`) as HTMLInputElement
+        if (editImgInput?.files?.[0]) {
+            const compressed = await imageCompression(editImgInput.files[0], {
+                maxSizeMB: 1,
+                maxWidthOrHeight: 1024,
+                useWebWorker: true,
+            })
+            formData.set('imagem', compressed, compressed.name)
+        }
+
+        const result = await updateVolunteer(id, formData)
+        if (result.success) {
+            setEditingId(null)
+            await loadVolunteers()
+        }
+        alert(result.message)
+        setSubmitting(false)
+    }
+
+    async function handleDelete(id: string, nome: string) {
+        if (!confirm(`Remover ${nome} da lista de voluntários?`)) return
+        setSubmitting(true)
+        const result = await deleteVolunteer(id)
+        if (result.success) await loadVolunteers()
+        alert(result.message)
+        setSubmitting(false)
+    }
+
+    function startEdit(vol: any) {
+        setEditingId(vol.id)
+        setEditNome(vol.nome)
+        setEditRole(vol.role)
+    }
+
+    return (
+        <div className="space-y-8">
+            {/* Formulário de cadastro */}
+            <Card className="bg-white border-slate-200 shadow-sm">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Users className="text-pink-600 w-5 h-5" />
+                        Adicionar Voluntário(a)
+                    </CardTitle>
+                    <CardDescription>Cadastre novos voluntários para a página Sobre.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handleCreate} className="space-y-4">
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Nome Completo <span className="text-red-500">*</span></Label>
+                                <Input name="nome" required placeholder="Ex: Maria da Silva" className="bg-white border-slate-200" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Função / Cargo <span className="text-slate-400 text-sm">(opcional)</span></Label>
+                                <Input name="role" placeholder="Ex: Presidente, Fundadora, etc." className="bg-white border-slate-200" />
+                                <p className="text-xs text-slate-400">Deixe vazio para exibir &quot;Voluntário(a)&quot;</p>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Foto <span className="text-red-500">*</span></Label>
+                            <div className="flex items-center gap-4">
+                                {previewUrl && (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={previewUrl} alt="Preview" className="w-20 h-20 rounded-full object-cover border-2 border-pink-200" />
+                                )}
+                                <Input
+                                    name="imagem"
+                                    type="file"
+                                    accept="image/*"
+                                    required
+                                    className="bg-white border-slate-200"
+                                    onChange={e => {
+                                        const f = e.target.files?.[0]
+                                        if (f) setPreviewUrl(URL.createObjectURL(f))
+                                    }}
+                                />
+                            </div>
+                            <p className="text-xs text-slate-400">JPG ou PNG. Recomendado: foto quadrada, mínimo 400×400px.</p>
+                        </div>
+                        <div className="flex justify-end">
+                            <Button disabled={submitting} className="bg-pink-600 hover:bg-pink-700 text-white gap-2">
+                                {submitting ? <Sparkles className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                {submitting ? 'Adicionando...' : 'Adicionar Voluntário(a)'}
+                            </Button>
+                        </div>
+                    </form>
+                </CardContent>
+            </Card>
+
+            {/* Lista de voluntários */}
+            <Card className="bg-white border-slate-200 shadow-sm">
+                <CardHeader>
+                    <CardTitle>Voluntários Cadastrados</CardTitle>
+                    <CardDescription>{volunteers.length} voluntário{volunteers.length !== 1 ? 's' : ''} na página Sobre</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {loading ? (
+                        <p className="text-sm text-slate-400">Carregando...</p>
+                    ) : volunteers.length === 0 ? (
+                        <p className="text-sm text-slate-400 italic">Nenhum voluntário cadastrado ainda. Adicione acima ou execute a migração.</p>
+                    ) : (
+                        <div className="grid gap-3">
+                            {volunteers.map((vol: any) => (
+                                <div key={vol.id} className="flex items-center gap-4 p-3 border border-slate-200 rounded-lg hover:border-pink-300 transition-colors">
+                                    {/* Foto */}
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        src={vol.imagemUrl}
+                                        alt={vol.nome}
+                                        className="w-14 h-14 rounded-full object-cover border-2 border-slate-200 flex-shrink-0"
+                                    />
+
+                                    {editingId === vol.id ? (
+                                        /* Modo edição */
+                                        <div className="flex-1 space-y-2">
+                                            <div className="grid md:grid-cols-2 gap-2">
+                                                <Input
+                                                    value={editNome}
+                                                    onChange={e => setEditNome(e.target.value)}
+                                                    placeholder="Nome"
+                                                    className="bg-white border-slate-200 h-9 text-sm"
+                                                />
+                                                <Input
+                                                    value={editRole}
+                                                    onChange={e => setEditRole(e.target.value)}
+                                                    placeholder="Função (opcional)"
+                                                    className="bg-white border-slate-200 h-9 text-sm"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Input
+                                                    id={`edit-img-${vol.id}`}
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="bg-white border-slate-200 h-9 text-xs flex-1"
+                                                />
+                                                <Button
+                                                    size="sm"
+                                                    disabled={submitting}
+                                                    onClick={() => handleUpdate(vol.id)}
+                                                    className="bg-green-600 hover:bg-green-700 text-white h-9 px-3"
+                                                >
+                                                    {submitting ? 'Salvando...' : 'Salvar'}
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => setEditingId(null)}
+                                                    className="h-9 px-3 text-slate-500"
+                                                >
+                                                    Cancelar
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        /* Modo visualização */
+                                        <>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-medium text-slate-800 truncate">{vol.nome}</p>
+                                                <p className="text-xs text-pink-600">{vol.role || 'Voluntário(a)'}</p>
+                                            </div>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-8 w-8 text-slate-400 hover:text-blue-600 shrink-0"
+                                                onClick={() => startEdit(vol)}
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-8 w-8 text-slate-400 hover:text-red-600 shrink-0"
+                                                onClick={() => handleDelete(vol.id, vol.nome)}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
     )
 }
 
