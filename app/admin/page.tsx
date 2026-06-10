@@ -8,12 +8,18 @@ import {
     savePopupSettings, getPopupSettings,
     getVolunteers, createVolunteer, updateVolunteer, deleteVolunteer,
     updateVolunteersOrder,
+    // Lojinha Actions:
+    getProdutos, criarProduto, editarProduto, darEntradaEstoque,
+    registrarConsignacao, registrarVenda, registrarDevolucao,
+    ajusteManual, getConsignacoes, getMovimentacoes
 } from './actions'
 import { TRANSPARENCY_CATEGORIES } from '@/lib/constants'
 import {
     BarChart3, FileText, TrendingUp, Upload, Bot, CheckCircle2,
     LayoutDashboard, Settings, Sparkles, Menu, Calendar, Trash2, Plus, Shield,
     Image as ImageIcon, Megaphone, Eye, EyeOff, Users, Pencil, GripVertical,
+    // Lojinha Icons:
+    ShoppingBag, Package, History, DollarSign, Undo2, ArrowDownLeft, ArrowUpRight, Tag, Coins
 } from 'lucide-react'
 import { createCalendarEvent, getCalendarEvents, deleteCalendarEvent } from './actions'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -80,6 +86,7 @@ export default function AdminDashboard() {
                     <SidebarItem icon={Megaphone} label="Popup do Site" active={activeSection === 'popup'} onClick={() => setActiveSection('popup')} />
                     <SidebarItem icon={Calendar} label="Calendário" active={activeSection === 'calendario'} onClick={() => setActiveSection('calendario')} />
                     <SidebarItem icon={Users} label="Voluntários" active={activeSection === 'voluntarios'} onClick={() => setActiveSection('voluntarios')} />
+                    <SidebarItem icon={ShoppingBag} label="Lojinha APCC" active={activeSection === 'lojinha'} onClick={() => setActiveSection('lojinha')} />
                     <SidebarItem icon={Sparkles} label="Personalização" active={activeSection === 'personalizacao'} onClick={() => setActiveSection('personalizacao')} />
                     <SidebarItem icon={Bot} label="Ferramentas IA" active={activeSection === 'ia'} onClick={() => setActiveSection('ia')} />
                     <SidebarItem icon={Settings} label="Configurações" />
@@ -107,6 +114,7 @@ export default function AdminDashboard() {
                                     <SelectItem value="popup">Popup do Site</SelectItem>
                                     <SelectItem value="calendario">Calendário</SelectItem>
                                     <SelectItem value="voluntarios">Voluntários</SelectItem>
+                                    <SelectItem value="lojinha">Lojinha APCC</SelectItem>
                                     <SelectItem value="personalizacao">Personalização Visual</SelectItem>
                                     <SelectItem value="ia">Ferramentas IA (Demo)</SelectItem>
                                 </SelectContent>
@@ -419,6 +427,9 @@ export default function AdminDashboard() {
 
                     {/* VOLUNTÁRIOS */}
                     {activeSection === 'voluntarios' && <VoluntariosManager />}
+
+                    {/* LOJINHA */}
+                    {activeSection === 'lojinha' && <LojinhaManager />}
 
                     {/* IA — APENAS DEMONSTRAÇÃO */}
                     {activeSection === 'ia' && (
@@ -1304,3 +1315,1096 @@ function StatCard({ title, value, icon: Icon, color, bgColor }: { title: string;
         </Card>
     )
 }
+
+// ─── Componente LojinhaManager ────────────────────────────────────────────────
+function LojinhaManager() {
+    const [subTab, setSubTab] = useState<'produtos' | 'entrada' | 'consignacao' | 'venda' | 'devolucao' | 'extrato'>('produtos')
+    const [produtos, setProdutos] = useState<any[]>([])
+    const [consignacoes, setConsignacoes] = useState<any[]>([])
+    const [movimentacoes, setMovimentacoes] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+
+    // Estados de formulário/modal de produto
+    const [isProductModalOpen, setIsProductModalOpen] = useState(false)
+    const [editingProduct, setEditingProduct] = useState<any>(null)
+    const [prodNome, setProdNome] = useState('')
+    const [prodCor, setProdCor] = useState('')
+    const [prodPreco, setProdPreco] = useState('')
+    const [prodDesc, setProdDesc] = useState('')
+    const [prodAtivo, setProdAtivo] = useState(true)
+    const [prodTamanhos, setProdTamanhos] = useState<{ tamanho: string; quantidade: number }[]>([])
+    const [newTamanhoNome, setNewTamanhoNome] = useState('')
+    const [newTamanhoQtd, setNewTamanhoQtd] = useState('')
+    const [prodFoto, setProdFoto] = useState<File | null>(null)
+    const [prodFotoPreview, setProdFotoPreview] = useState('')
+    const [submittingProduct, setSubmittingProduct] = useState(false)
+
+    // Estados da Entrada de Estoque
+    const [entradaProdId, setEntradaProdId] = useState('')
+    const [entradaQuantidades, setEntradaQuantidades] = useState<Record<string, number>>({})
+    const [entradaResponsavel, setEntradaResponsavel] = useState('')
+    const [submittingEntrada, setSubmittingEntrada] = useState(false)
+
+    // Estados da Consignação
+    const [consVendedora, setConsVendedora] = useState('')
+    const [consProdId, setConsProdId] = useState('')
+    const [consQuantidades, setConsQuantidades] = useState<Record<string, number>>({})
+    const [consObs, setConsObs] = useState('')
+    const [consResponsavel, setConsResponsavel] = useState('')
+    const [submittingConsignacao, setSubmittingConsignacao] = useState(false)
+
+    // Estados do Registro de Venda
+    const [vendaProdId, setVendaProdId] = useState('')
+    const [vendaOrigem, setVendaOrigem] = useState<'central' | 'consignado'>('central')
+    const [vendaConsignacaoId, setVendaConsignacaoId] = useState('')
+    const [vendaQuantidades, setVendaQuantidades] = useState<Record<string, number>>({})
+    const [vendaValorTotal, setVendaValorTotal] = useState('')
+    const [vendaVendedora, setVendaVendedora] = useState('')
+    const [vendaResponsavel, setVendaResponsavel] = useState('')
+    const [vendaObs, setVendaObs] = useState('')
+    const [submittingVenda, setSubmittingVenda] = useState(false)
+
+    // Estados da Devolução
+    const [devolucaoConsId, setDevolucaoConsId] = useState('')
+    const [devolucaoQuantidades, setDevolucaoQuantidades] = useState<Record<string, number>>({})
+    const [devolucaoResponsavel, setDevolucaoResponsavel] = useState('')
+    const [submittingDevolucao, setSubmittingDevolucao] = useState(false)
+
+    // Filtros de Extrato
+    const [filtroTipo, setFiltroTipo] = useState('todos')
+    const [filtroProdId, setFiltroProdId] = useState('todos')
+    const [filtroVendedora, setFiltroVendedora] = useState('')
+
+    const carregarDados = async () => {
+        setLoading(true)
+        try {
+            const [prods, cons, movs] = await Promise.all([
+                getProdutos(),
+                getConsignacoes(),
+                getMovimentacoes()
+            ])
+            setProdutos(prods || [])
+            setConsignacoes(cons || [])
+            setMovimentacoes(movs || [])
+        } catch (err) {
+            console.error('Erro ao carregar dados da lojinha:', err)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        carregarDados()
+    }, [])
+
+    // Recalcula o valor sugerido de venda
+    useEffect(() => {
+        if (!vendaProdId) return
+        const prod = produtos.find(p => p.id === vendaProdId)
+        if (!prod) return
+
+        let totalItens = 0
+        Object.keys(vendaQuantidades).forEach(k => {
+            totalItens += vendaQuantidades[k] || 0
+        })
+
+        setVendaValorTotal((prod.preco * totalItens).toFixed(2))
+    }, [vendaQuantidades, vendaProdId, produtos])
+
+    // Preenche a vendedora automaticamente caso seja venda de consignado
+    useEffect(() => {
+        if (vendaOrigem === 'consignado' && vendaConsignacaoId) {
+            const cons = consignacoes.find(c => c.id === vendaConsignacaoId)
+            if (cons) setVendaVendedora(cons.vendedora)
+        } else if (vendaOrigem === 'central') {
+            setVendaVendedora('site')
+        }
+    }, [vendaOrigem, vendaConsignacaoId, consignacoes])
+
+    const carregarGradePadrao = () => {
+        setProdTamanhos([
+            { tamanho: "12", quantidade: 0 },
+            { tamanho: "14", quantidade: 0 },
+            { tamanho: "16", quantidade: 0 },
+            { tamanho: "PP", quantidade: 0 },
+            { tamanho: "M",  quantidade: 0 },
+            { tamanho: "G",  quantidade: 0 },
+            { tamanho: "GG", quantidade: 0 },
+            { tamanho: "X1", quantidade: 0 },
+            { tamanho: "X2", quantidade: 0 }
+        ])
+    }
+
+    const handleAddTamanho = () => {
+        if (!newTamanhoNome.trim()) return
+        const qtd = parseInt(newTamanhoQtd) || 0
+        if (prodTamanhos.some(t => t.tamanho.toUpperCase() === newTamanhoNome.toUpperCase().trim())) {
+            alert('Tamanho já adicionado.')
+            return
+        }
+        setProdTamanhos([...prodTamanhos, { tamanho: newTamanhoNome.toUpperCase().trim(), quantidade: qtd }])
+        setNewTamanhoNome('')
+        setNewTamanhoQtd('')
+    }
+
+    const handleRemoveTamanho = (index: number) => {
+        setProdTamanhos(prodTamanhos.filter((_, i) => i !== index))
+    }
+
+    const handleEditQuantity = (index: number, val: string) => {
+        const updated = [...prodTamanhos]
+        updated[index].quantidade = Math.max(0, parseInt(val) || 0)
+        setProdTamanhos(updated)
+    }
+
+    const openCreateProduct = () => {
+        setEditingProduct(null)
+        setProdNome('')
+        setProdCor('')
+        setProdPreco('')
+        setProdDesc('')
+        setProdAtivo(true)
+        setProdTamanhos([])
+        setProdFoto(null)
+        setProdFotoPreview('')
+        setIsProductModalOpen(true)
+    }
+
+    const openEditProduct = (prod: any) => {
+        setEditingProduct(prod)
+        setProdNome(prod.nome)
+        setProdCor(prod.cor || '')
+        setProdPreco(prod.preco.toString())
+        setProdDesc(prod.descricao || '')
+        setProdAtivo(prod.ativo)
+        setProdTamanhos(prod.tamanhos || [])
+        setProdFoto(null)
+        setProdFotoPreview(prod.fotoUrl || '')
+        setIsProductModalOpen(true)
+    }
+
+    // Gravar Produto (Criar / Editar)
+    const handleSaveProduct = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!prodNome) { alert('Nome é obrigatório'); return }
+        if (!prodPreco || isNaN(parseFloat(prodPreco))) { alert('Preço inválido'); return }
+
+        setSubmittingProduct(true)
+        try {
+            const formData = new FormData()
+            formData.set('nome', prodNome)
+            formData.set('cor', prodCor)
+            formData.set('preco', prodPreco)
+            formData.set('descricao', prodDesc)
+            formData.set('ativo', prodAtivo ? 'true' : 'false')
+            formData.set('tamanhos', JSON.stringify(prodTamanhos))
+            formData.set('responsavel', 'Central GESTOR')
+
+            if (prodFoto) {
+                // Compressão de imagem do produto no cliente (limite de 1MB, tamanho ideal)
+                const compressed = await imageCompression(prodFoto, {
+                    maxSizeMB: 1,
+                    maxWidthOrHeight: 800,
+                    useWebWorker: true,
+                })
+                formData.set('foto', compressed, compressed.name)
+            }
+
+            let res
+            if (editingProduct) {
+                res = await editarProduto(editingProduct.id, formData)
+            } else {
+                res = await criarProduto(formData)
+            }
+
+            if (res.success) {
+                alert(res.message)
+                setIsProductModalOpen(false)
+                carregarDados()
+            } else {
+                alert(res.message)
+            }
+        } catch (err) {
+            console.error('Erro ao salvar produto:', err)
+            alert('Ocorreu um erro ao salvar o produto.')
+        } finally {
+            setSubmittingProduct(false)
+        }
+    }
+
+    // Entrada de Estoque
+    const handleRegisterEntrada = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!entradaProdId) { alert('Selecione o produto'); return }
+
+        const itens = Object.keys(entradaQuantidades)
+            .map(tamanho => ({ tamanho, quantidade: entradaQuantidades[tamanho] }))
+            .filter(item => item.quantidade > 0)
+
+        if (itens.length === 0) { alert('Preencha quantidades maiores que zero'); return }
+
+        setSubmittingEntrada(true)
+        try {
+            const res = await darEntradaEstoque(entradaProdId, itens, entradaResponsavel || 'Gestor Central')
+            if (res.success) {
+                alert(res.message)
+                setEntradaQuantidades({})
+                setEntradaProdId('')
+                carregarDados()
+            } else {
+                alert(res.message)
+            }
+        } catch (err) {
+            console.error(err)
+            alert('Erro ao registrar entrada.')
+        } finally {
+            setSubmittingEntrada(false)
+        }
+    }
+
+    // Registrar Consignação
+    const handleRegisterConsignacao = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!consVendedora.trim()) { alert('Preencha o nome da vendedora'); return }
+        if (!consProdId) { alert('Selecione o produto'); return }
+
+        const itens = Object.keys(consQuantidades)
+            .map(tamanho => ({ tamanho, quantidade: consQuantidades[tamanho] }))
+            .filter(item => item.quantidade > 0)
+
+        if (itens.length === 0) { alert('Insira pelo menos um item a consignar'); return }
+
+        setSubmittingConsignacao(true)
+        try {
+            const res = await registrarConsignacao(
+                consVendedora.trim(),
+                consProdId,
+                itens,
+                consObs,
+                consResponsavel || 'Gestor Central'
+            )
+            if (res.success) {
+                alert(res.message)
+                setConsQuantidades({})
+                setConsVendedora('')
+                setConsObs('')
+                carregarDados()
+            } else {
+                alert(res.message)
+            }
+        } catch (err) {
+            console.error(err)
+            alert('Erro ao registrar consignação.')
+        } finally {
+            setSubmittingConsignacao(false)
+        }
+    }
+
+    // Registrar Venda
+    const handleRegisterVenda = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!vendaProdId) { alert('Selecione o produto'); return }
+        if (vendaOrigem === 'consignado' && !vendaConsignacaoId) { alert('Selecione a consignação'); return }
+
+        const itens = Object.keys(vendaQuantidades)
+            .map(tamanho => ({ tamanho, quantidade: vendaQuantidades[tamanho] }))
+            .filter(item => item.quantidade > 0)
+
+        if (itens.length === 0) { alert('Insira quantidades vendidas'); return }
+
+        setSubmittingVenda(true)
+        try {
+            const res = await registrarVenda({
+                produtoId: vendaProdId,
+                itens,
+                origem: vendaOrigem,
+                consignacaoId: vendaOrigem === 'consignado' ? vendaConsignacaoId : undefined,
+                vendedora: vendaVendedora || (vendaOrigem === 'central' ? 'site' : ''),
+                valorTotal: parseFloat(vendaValorTotal) || 0,
+                responsavel: vendaResponsavel || 'Gestor Central',
+                observacao: vendaObs
+            })
+
+            if (res.success) {
+                alert(res.message)
+                setVendaQuantidades({})
+                setVendaProdId('')
+                setVendaConsignacaoId('')
+                setVendaObs('')
+                carregarDados()
+            } else {
+                alert(res.message)
+            }
+        } catch (err) {
+            console.error(err)
+            alert('Erro ao registrar venda.')
+        } finally {
+            setSubmittingVenda(false)
+        }
+    }
+
+    // Registrar Devolução
+    const handleRegisterDevolucao = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!devolucaoConsId) { alert('Selecione a consignação'); return }
+
+        const itens = Object.keys(devolucaoQuantidades)
+            .map(tamanho => ({ tamanho, quantidade: devolucaoQuantidades[tamanho] }))
+            .filter(item => item.quantidade > 0)
+
+        if (itens.length === 0) { alert('Insira quantidades a devolver'); return }
+
+        setSubmittingDevolucao(true)
+        try {
+            const res = await registrarDevolucao(devolucaoConsId, itens, devolucaoResponsavel || 'Gestor Central')
+            if (res.success) {
+                alert(res.message)
+                setDevolucaoQuantidades({})
+                setDevolucaoConsId('')
+                carregarDados()
+            } else {
+                alert(res.message)
+            }
+        } catch (err) {
+            console.error(err)
+            alert('Erro ao registrar devolução.')
+        } finally {
+            setSubmittingDevolucao(false)
+        }
+    }
+
+    // Filtragem das movimentações
+    const movsFiltradas = movimentacoes.filter(mov => {
+        if (filtroTipo !== 'todos' && mov.tipo !== filtroTipo) return false
+        if (filtroProdId !== 'todos' && mov.produtoId !== filtroProdId) return false
+        if (filtroVendedora.trim() && !mov.vendedora?.toLowerCase().includes(filtroVendedora.toLowerCase().trim())) return false
+        return true
+    })
+
+    return (
+        <div className="space-y-8 pb-12">
+            {/* Header / Sub Abas */}
+            <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3 bg-white p-4 rounded-xl shadow-sm">
+                <Button variant={subTab === 'produtos' ? 'default' : 'ghost'} className={subTab === 'produtos' ? 'bg-pink-600 text-white hover:bg-pink-700' : 'text-slate-600'} onClick={() => setSubTab('produtos')}>
+                    <Package className="w-4 h-4 mr-2" /> Produtos
+                </Button>
+                <Button variant={subTab === 'entrada' ? 'default' : 'ghost'} className={subTab === 'entrada' ? 'bg-pink-600 text-white hover:bg-pink-700' : 'text-slate-600'} onClick={() => setSubTab('entrada')}>
+                    <ArrowDownLeft className="w-4 h-4 mr-2" /> Entrada Central
+                </Button>
+                <Button variant={subTab === 'consignacao' ? 'default' : 'ghost'} className={subTab === 'consignacao' ? 'bg-pink-600 text-white hover:bg-pink-700' : 'text-slate-600'} onClick={() => setSubTab('consignacao')}>
+                    <Users className="w-4 h-4 mr-2" /> Consignação
+                </Button>
+                <Button variant={subTab === 'venda' ? 'default' : 'ghost'} className={subTab === 'venda' ? 'bg-pink-600 text-white hover:bg-pink-700' : 'text-slate-600'} onClick={() => setSubTab('venda')}>
+                    <DollarSign className="w-4 h-4 mr-2" /> Registrar Venda
+                </Button>
+                <Button variant={subTab === 'devolucao' ? 'default' : 'ghost'} className={subTab === 'devolucao' ? 'bg-pink-600 text-white hover:bg-pink-700' : 'text-slate-600'} onClick={() => setSubTab('devolucao')}>
+                    <Undo2 className="w-4 h-4 mr-2" /> Devolução
+                </Button>
+                <Button variant={subTab === 'extrato' ? 'default' : 'ghost'} className={subTab === 'extrato' ? 'bg-pink-600 text-white hover:bg-pink-700' : 'text-slate-600'} onClick={() => setSubTab('extrato')}>
+                    <History className="w-4 h-4 mr-2" /> Extrato e Relatório
+                </Button>
+            </div>
+
+            {loading ? (
+                <div className="flex items-center justify-center p-12 text-slate-400">
+                    <Sparkles className="w-6 h-6 animate-spin text-pink-600 mr-2" />
+                    <span>Carregando dados da Lojinha...</span>
+                </div>
+            ) : (
+                <div className="space-y-6">
+                    {/* ─── ABA PRODUTOS ─── */}
+                    {subTab === 'produtos' && (
+                        <div className="space-y-6">
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-xl font-bold text-slate-800">Camisetas &amp; Produtos</h3>
+                                <Button onClick={openCreateProduct} className="bg-pink-600 hover:bg-pink-700 text-white gap-2">
+                                    <Plus className="w-4 h-4" /> Cadastrar Produto
+                                </Button>
+                            </div>
+
+                            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                                {produtos.map(prod => (
+                                    <Card key={prod.id} className={`bg-white border-slate-200 shadow-sm relative overflow-hidden flex flex-col ${!prod.ativo ? 'opacity-60' : ''}`}>
+                                        <div className="h-48 bg-slate-100 relative">
+                                            {prod.fotoUrl ? (
+                                                <img src={prod.fotoUrl} alt={prod.nome} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-50"><ImageIcon className="w-12 h-12" /></div>
+                                            )}
+                                            <div className="absolute top-2 right-2 bg-slate-900/80 px-2 py-1 rounded text-xs text-white font-bold">
+                                                R$ {prod.preco.toFixed(2)}
+                                            </div>
+                                        </div>
+                                        <CardContent className="p-4 flex-1 flex flex-col justify-between">
+                                            <div>
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <h4 className="font-bold text-slate-900 leading-snug">{prod.nome}</h4>
+                                                    <span className="text-xs bg-pink-50 text-pink-600 px-2 py-0.5 rounded border border-pink-100 font-medium">{prod.cor}</span>
+                                                </div>
+                                                <p className="text-xs text-slate-500 line-clamp-2 mb-4">{prod.descricao || 'Sem descrição cadastrada.'}</p>
+                                                
+                                                {/* Grade de tamanhos */}
+                                                <div className="mb-4">
+                                                    <p className="text-xs uppercase font-bold text-slate-400 mb-1.5 tracking-wider">Estoque Central</p>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {prod.tamanhos?.map((t: any) => (
+                                                            <div key={t.tamanho} className={`text-xs px-2 py-1 rounded border flex items-center gap-1.5 ${t.quantidade === 0 ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-50 text-slate-700 border-slate-200'}`}>
+                                                                <span className="font-bold">{t.tamanho}:</span>
+                                                                <span>{t.quantidade}</span>
+                                                            </div>
+                                                        ))}
+                                                        {(!prod.tamanhos || prod.tamanhos.length === 0) && (
+                                                            <span className="text-xs text-slate-400 italic">Nenhum tamanho configurado.</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+                                                <span className={`text-xs font-semibold ${prod.ativo ? 'text-green-600' : 'text-slate-400'}`}>
+                                                    {prod.ativo ? '• Ativo na Vitrine' : '• Inativo'}
+                                                </span>
+                                                <Button size="sm" variant="outline" onClick={() => openEditProduct(prod)} className="border-slate-200 hover:bg-slate-50 gap-1.5">
+                                                    <Pencil className="w-3.5 h-3.5" /> Editar
+                                                </Button>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+
+                            {/* Modal de Criar/Editar Produto */}
+                            {isProductModalOpen && (
+                                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+                                    <div className="bg-white rounded-xl max-w-2xl w-full p-6 shadow-xl relative max-h-[90vh] overflow-y-auto">
+                                        <h3 className="text-lg font-bold text-slate-900 mb-4">
+                                            {editingProduct ? 'Editar Produto' : 'Cadastrar Novo Produto'}
+                                        </h3>
+                                        <form onSubmit={handleSaveProduct} className="space-y-4">
+                                            <div className="grid md:grid-cols-2 gap-4">
+                                                <div className="space-y-1">
+                                                    <Label>Nome do Produto *</Label>
+                                                    <Input required value={prodNome} onChange={e => setProdNome(e.target.value)} placeholder="Ex: Camiseta Rosa Campanha" className="bg-white" />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div className="space-y-1">
+                                                        <Label>Cor *</Label>
+                                                        <Input required value={prodCor} onChange={e => setProdCor(e.target.value)} placeholder="Ex: Rosa" className="bg-white" />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <Label>Preço (R$) *</Label>
+                                                        <Input required type="number" step="0.01" min="0" value={prodPreco} onChange={e => setProdPreco(e.target.value)} placeholder="Ex: 45.00" className="bg-white" />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <Label>Descrição</Label>
+                                                <Textarea value={prodDesc} onChange={e => setProdDesc(e.target.value)} placeholder="Informações detalhadas do produto para a vitrine..." className="bg-white h-16" />
+                                            </div>
+
+                                            <div className="flex items-center gap-2 py-2">
+                                                <input type="checkbox" id="prodAtivoCheck" checked={prodAtivo} onChange={e => setProdAtivo(e.target.checked)} className="rounded border-slate-300 text-pink-600 focus:ring-pink-500 w-4 h-4" />
+                                                <Label htmlFor="prodAtivoCheck" className="cursor-pointer select-none font-medium">Exibir produto ativo na vitrine</Label>
+                                            </div>
+
+                                            {/* Grade de Tamanhos e Quantidades */}
+                                            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-3">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="font-bold text-sm text-slate-800">Grade de Tamanhos</span>
+                                                    <Button type="button" size="sm" variant="outline" onClick={carregarGradePadrao} className="text-xs">
+                                                        Carregar Tamanhos Padrão (Lote 1)
+                                                    </Button>
+                                                </div>
+
+                                                <div className="flex flex-wrap gap-2 max-h-[160px] overflow-y-auto pr-1">
+                                                    {prodTamanhos.map((t, idx) => (
+                                                        <div key={idx} className="flex items-center gap-1.5 bg-white border border-slate-200 rounded px-2 py-1 shadow-sm">
+                                                            <span className="font-bold text-xs uppercase text-slate-600">{t.tamanho}:</span>
+                                                            <input type="number" min="0" value={t.quantidade} onChange={e => handleEditQuantity(idx, e.target.value)} className="w-12 text-center text-xs h-6 border-slate-200 rounded font-semibold bg-slate-50 focus:bg-white" />
+                                                            <button type="button" onClick={() => handleRemoveTamanho(idx)} className="text-red-500 hover:text-red-700 text-xs font-bold px-0.5 ml-1">✕</button>
+                                                        </div>
+                                                    ))}
+                                                    {prodTamanhos.length === 0 && (
+                                                        <p className="text-xs text-slate-400 italic">Nenhum tamanho adicionado na grade. Adicione abaixo.</p>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex gap-2 items-end border-t border-slate-200 pt-3">
+                                                    <div className="w-1/2 space-y-1">
+                                                        <Label className="text-xs">Tamanho (Ex: GG, M, 14)</Label>
+                                                        <Input size={10} value={newTamanhoNome} onChange={e => setNewTamanhoNome(e.target.value)} placeholder="Tamanho" className="bg-white h-8 text-xs" />
+                                                    </div>
+                                                    <div className="w-1/2 space-y-1">
+                                                        <Label className="text-xs">Qtd Inicial Estoque</Label>
+                                                        <Input type="number" min="0" value={newTamanhoQtd} onChange={e => setNewTamanhoQtd(e.target.value)} placeholder="Qtd" className="bg-white h-8 text-xs" />
+                                                    </div>
+                                                    <Button type="button" size="sm" onClick={handleAddTamanho} className="bg-slate-700 hover:bg-slate-800 text-white text-xs h-8">Adicionar</Button>
+                                                </div>
+                                            </div>
+
+                                            {/* Foto do produto */}
+                                            <div className="space-y-1">
+                                                <Label>Foto do Produto</Label>
+                                                <div className="flex items-center gap-4">
+                                                    {prodFotoPreview && (
+                                                        <img src={prodFotoPreview} alt="Preview" className="w-16 h-16 rounded object-cover border border-slate-200" />
+                                                    )}
+                                                    <Input type="file" accept="image/*" onChange={e => {
+                                                        const f = e.target.files?.[0]
+                                                        if (f) {
+                                                            setProdFoto(f)
+                                                            setProdFotoPreview(URL.createObjectURL(f))
+                                                        }
+                                                    }} className="bg-white" />
+                                                </div>
+                                                <p className="text-[10px] text-slate-400">Imagens quadradas são ideais. A imagem será compactada no cliente antes do envio.</p>
+                                            </div>
+
+                                            <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 mt-6">
+                                                <Button type="button" variant="ghost" onClick={() => setIsProductModalOpen(false)}>Cancelar</Button>
+                                                <Button type="submit" disabled={submittingProduct} className="bg-pink-600 hover:bg-pink-700 text-white gap-2">
+                                                    {submittingProduct ? <Sparkles className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                                    {submittingProduct ? 'Salvando...' : 'Confirmar e Salvar'}
+                                                </Button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ─── ABA ENTRADA DE ESTOQUE ─── */}
+                    {subTab === 'entrada' && (
+                        <Card className="bg-white border-slate-200 shadow-sm max-w-xl mx-auto">
+                            <CardHeader>
+                                <CardTitle className="text-slate-900 flex items-center gap-2">
+                                    <ArrowDownLeft className="text-green-600 w-5 h-5" />
+                                    Dar Entrada de Lote
+                                </CardTitle>
+                                <CardDescription>Adicione novas peças recém-chegadas ao estoque central do produto selecionado.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <form onSubmit={handleRegisterEntrada} className="space-y-5">
+                                    <div className="space-y-1">
+                                        <Label>Selecionar Produto</Label>
+                                        <Select value={entradaProdId} onValueChange={v => { setEntradaProdId(v); setEntradaQuantidades({}) }}>
+                                            <SelectTrigger className="bg-white"><SelectValue placeholder="Selecione o produto..." /></SelectTrigger>
+                                            <SelectContent>
+                                                {produtos.map(p => <SelectItem key={p.id} value={p.id}>{p.nome} ({p.cor})</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {entradaProdId && (
+                                        <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-3 animate-fadeIn">
+                                            <h4 className="font-bold text-xs uppercase text-slate-500 tracking-wider">Lançar Quantidades por Tamanho</h4>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                {produtos.find(p => p.id === entradaProdId)?.tamanhos?.map((t: any) => (
+                                                    <div key={t.tamanho} className="bg-white p-2 rounded border border-slate-200 flex flex-col items-center gap-1 shadow-sm">
+                                                        <span className="font-bold text-xs text-slate-700 uppercase">{t.tamanho}</span>
+                                                        <span className="text-[10px] text-slate-400">Saldo atual: {t.quantidade}</span>
+                                                        <Input type="number" min="0" value={entradaQuantidades[t.tamanho] || ''} onChange={e => {
+                                                            setEntradaQuantidades({
+                                                                ...entradaQuantidades,
+                                                                [t.tamanho]: Math.max(0, parseInt(e.target.value) || 0)
+                                                            })
+                                                        }} className="text-center h-8 font-semibold w-16" placeholder="0" />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-1">
+                                        <Label>Responsável pelo Lançamento</Label>
+                                        <Input value={entradaResponsavel} onChange={e => setEntradaResponsavel(e.target.value)} placeholder="Ex: Fabricio - Gestor" className="bg-white" />
+                                    </div>
+
+                                    <Button type="submit" disabled={submittingEntrada || !entradaProdId} className="w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold">
+                                        {submittingEntrada ? 'Registrando entrada...' : 'Confirmar e Somar ao Estoque'}
+                                    </Button>
+                                </form>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* ─── ABA CONSIGNAÇÃO ─── */}
+                    {subTab === 'consignacao' && (
+                        <div className="grid gap-6 lg:grid-cols-3">
+                            <Card className="bg-white border-slate-200 shadow-sm lg:col-span-1 h-fit">
+                                <CardHeader>
+                                    <CardTitle className="text-slate-900 flex items-center gap-2">
+                                        <Users className="text-pink-600 w-5 h-5" />
+                                        Registrar Consignação
+                                    </CardTitle>
+                                    <CardDescription>Retira peças do estoque central e atribui a uma vendedora para eventos.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <form onSubmit={handleRegisterConsignacao} className="space-y-4">
+                                        <div className="space-y-1">
+                                            <Label>Vendedora (Nome Livre) *</Label>
+                                            <Input required value={consVendedora} onChange={e => setConsVendedora(e.target.value)} placeholder="Ex: Fabricio" className="bg-white" />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label>Selecionar Produto *</Label>
+                                            <Select value={consProdId} onValueChange={v => { setConsProdId(v); setConsQuantidades({}) }}>
+                                                <SelectTrigger className="bg-white"><SelectValue placeholder="Selecione o produto..." /></SelectTrigger>
+                                                <SelectContent>
+                                                    {produtos.map(p => <SelectItem key={p.id} value={p.id}>{p.nome} ({p.cor})</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {consProdId && (
+                                            <div className="border border-slate-200 rounded-lg p-3 bg-slate-50 space-y-2">
+                                                <h4 className="font-bold text-xs uppercase text-slate-500">Quantidades Levadas</h4>
+                                                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                                                    {produtos.find(p => p.id === consProdId)?.tamanhos?.map((t: any) => (
+                                                        <div key={t.tamanho} className="bg-white px-3 py-1.5 rounded border border-slate-200 flex justify-between items-center shadow-sm text-xs">
+                                                            <div className="flex flex-col">
+                                                                <span className="font-bold text-slate-800 uppercase">Tamanho {t.tamanho}</span>
+                                                                <span className="text-[10px] text-slate-400">Central: {t.quantidade} disponíveis</span>
+                                                            </div>
+                                                            <Input type="number" min="0" max={t.quantidade} value={consQuantidades[t.tamanho] || ''} onChange={e => {
+                                                                const val = Math.max(0, parseInt(e.target.value) || 0)
+                                                                if (val > t.quantidade) {
+                                                                    alert(`Você não pode consignar mais do que há no estoque central (${t.quantidade}).`)
+                                                                    return
+                                                                }
+                                                                setConsQuantidades({
+                                                                    ...consQuantidades,
+                                                                    [t.tamanho]: val
+                                                                })
+                                                            }} className="text-center h-8 font-semibold w-16" placeholder="0" />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-1">
+                                            <Label>Observação / Evento</Label>
+                                            <Textarea value={consObs} onChange={e => setConsObs(e.target.value)} placeholder="Ex: Evento Praça de Alimentação 12/06" className="bg-white h-16" />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label>Responsável</Label>
+                                            <Input value={consResponsavel} onChange={e => setConsResponsavel(e.target.value)} placeholder="Ex: Central GESTOR" className="bg-white" />
+                                        </div>
+
+                                        <Button type="submit" disabled={submittingConsignacao || !consProdId} className="w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold">
+                                            {submittingConsignacao ? 'Registrando...' : 'Confirmar e Consignar'}
+                                        </Button>
+                                    </form>
+                                </CardContent>
+                            </Card>
+
+                            {/* Consignações abertas */}
+                            <Card className="bg-white border-slate-200 shadow-sm lg:col-span-2">
+                                <CardHeader>
+                                    <CardTitle>Consignações Abertas</CardTitle>
+                                    <CardDescription>Peças que estão em mãos de vendedoras. O saldo restante diminui com vendas e devoluções.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-4">
+                                        {consignacoes.filter(c => c.status === 'aberta').length === 0 ? (
+                                            <p className="text-sm text-slate-400 italic py-6 text-center">Nenhuma consignação aberta no momento.</p>
+                                        ) : (
+                                            consignacoes.filter(c => c.status === 'aberta').map(cons => (
+                                                <div key={cons.id} className="border border-slate-200 rounded-lg p-4 hover:border-pink-300 transition-colors bg-white shadow-sm space-y-3">
+                                                    <div className="flex justify-between items-start flex-wrap gap-2">
+                                                        <div>
+                                                            <h4 className="font-bold text-slate-900 text-base">{cons.vendedora}</h4>
+                                                            <p className="text-xs text-slate-500">Produto: <span className="font-semibold">{cons.produtoNome}</span></p>
+                                                            {cons.observacao && <p className="text-xs bg-slate-50 px-2 py-1 rounded italic text-slate-600 mt-1 border border-slate-100">{cons.observacao}</p>}
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="text-xs bg-pink-50 text-pink-600 border border-pink-100 rounded px-2 py-0.5 font-bold uppercase">Em Aberto</span>
+                                                            <p className="text-[10px] text-slate-400 mt-1">Registrado: {new Date(cons.createdAt).toLocaleDateString('pt-BR')}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Saldo na Consignação */}
+                                                    <div className="bg-slate-50 rounded p-3 border border-slate-100">
+                                                        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Saldo em Mãos (Restante)</p>
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {cons.itens?.map((i: any) => (
+                                                                <div key={i.tamanho} className={`text-xs px-2.5 py-1 rounded border font-semibold ${i.quantidade === 0 ? 'bg-red-50 text-red-400 border-red-100/50' : 'bg-white text-slate-700 border-slate-200'}`}>
+                                                                    {i.tamanho}: {i.quantidade} unidades
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
+
+                    {/* ─── ABA REGISTRAR VENDA ─── */}
+                    {subTab === 'venda' && (
+                        <Card className="bg-white border-slate-200 shadow-sm max-w-xl mx-auto">
+                            <CardHeader>
+                                <CardTitle className="text-slate-900 flex items-center gap-2">
+                                    <DollarSign className="text-pink-600 w-5 h-5" />
+                                    Registrar Venda (Confirmada / PIX)
+                                </CardTitle>
+                                <CardDescription>Gera a baixa de estoque correspondente. A venda pode vir do estoque central ou do estoque de uma vendedora.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <form onSubmit={handleRegisterVenda} className="space-y-4">
+                                    <div className="space-y-1">
+                                        <Label>Selecionar Produto *</Label>
+                                        <Select value={vendaProdId} onValueChange={v => { setVendaProdId(v); setVendaConsignacaoId(''); setVendaQuantidades({}) }}>
+                                            <SelectTrigger className="bg-white"><SelectValue placeholder="Selecione o produto..." /></SelectTrigger>
+                                            <SelectContent>
+                                                {produtos.map(p => <SelectItem key={p.id} value={p.id}>{p.nome} ({p.cor})</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <Label>Origem da Peça *</Label>
+                                        <div className="flex gap-4">
+                                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                                <input type="radio" name="vendaOrigem" checked={vendaOrigem === 'central'} onChange={() => { setVendaOrigem('central'); setVendaConsignacaoId(''); setVendaQuantidades({}) }} className="text-pink-600 focus:ring-pink-500" />
+                                                <span className="text-sm font-medium">Estoque Central</span>
+                                            </label>
+                                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                                <input type="radio" name="vendaOrigem" checked={vendaOrigem === 'consignado'} onChange={() => { setVendaOrigem('consignado'); setVendaQuantidades({}) }} className="text-pink-600 focus:ring-pink-500" />
+                                                <span className="text-sm font-medium">Consignado com Vendedora</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {vendaOrigem === 'consignado' && vendaProdId && (
+                                        <div className="space-y-1 animate-fadeIn">
+                                            <Label>Selecionar a Consignação da Vendedora *</Label>
+                                            <Select value={vendaConsignacaoId} onValueChange={v => { setVendaConsignacaoId(v); setVendaQuantidades({}) }}>
+                                                <SelectTrigger className="bg-white"><SelectValue placeholder="Selecione qual consignação..." /></SelectTrigger>
+                                                <SelectContent>
+                                                    {consignacoes.filter(c => c.status === 'aberta' && c.produtoId === vendaProdId).map(c => (
+                                                        <SelectItem key={c.id} value={c.id}>
+                                                            {c.vendedora} · Levou em {new Date(c.createdAt).toLocaleDateString('pt-BR')}
+                                                        </SelectItem>
+                                                    ))}
+                                                    {consignacoes.filter(c => c.status === 'aberta' && c.produtoId === vendaProdId).length === 0 && (
+                                                        <SelectItem disabled value="nenhuma">Nenhuma consignação aberta deste produto</SelectItem>
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
+
+                                    {vendaProdId && (vendaOrigem === 'central' || (vendaOrigem === 'consignado' && vendaConsignacaoId)) && (
+                                        <div className="border border-slate-200 rounded-lg p-3 bg-slate-50 space-y-2">
+                                            <h4 className="font-bold text-xs uppercase text-slate-500">Selecionar Tamanhos Vendidos</h4>
+                                            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                                                {(() => {
+                                                    let gradeDisponivel: { tamanho: string; quantidade: number }[] = []
+                                                    if (vendaOrigem === 'central') {
+                                                        gradeDisponivel = produtos.find(p => p.id === vendaProdId)?.tamanhos || []
+                                                    } else {
+                                                        gradeDisponivel = consignacoes.find(c => c.id === vendaConsignacaoId)?.itens || []
+                                                    }
+
+                                                    return gradeDisponivel.map(t => (
+                                                        <div key={t.tamanho} className="bg-white px-3 py-1.5 rounded border border-slate-200 flex justify-between items-center shadow-sm text-xs">
+                                                            <div className="flex flex-col">
+                                                                <span className="font-bold text-slate-800 uppercase">Tamanho {t.tamanho}</span>
+                                                                <span className="text-[10px] text-slate-400">Disponível: {t.quantidade} unidades</span>
+                                                            </div>
+                                                            <Input type="number" min="0" max={t.quantidade} value={vendaQuantidades[t.tamanho] || ''} onChange={e => {
+                                                                const val = Math.max(0, parseInt(e.target.value) || 0)
+                                                                if (val > t.quantidade) {
+                                                                    alert(`A quantidade vendida excede o saldo disponível (${t.quantidade}).`)
+                                                                    return
+                                                                }
+                                                                setVendaQuantidades({
+                                                                    ...vendaQuantidades,
+                                                                    [t.tamanho]: val
+                                                                })
+                                                            }} className="text-center h-8 font-semibold w-16" placeholder="0" />
+                                                        </div>
+                                                    ))
+                                                })()}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <Label>Vendedora (Identificação)</Label>
+                                            <Input disabled={vendaOrigem === 'consignado'} value={vendaVendedora} onChange={e => setVendaVendedora(e.target.value)} placeholder="Ex: site, Fabricio, etc." className="bg-white" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label>Valor Total Cobrado (R$)</Label>
+                                            <Input type="number" step="0.01" value={vendaValorTotal} onChange={e => setVendaValorTotal(e.target.value)} className="bg-white font-bold text-pink-600" />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <Label>Responsável pelo Lançamento</Label>
+                                            <Input value={vendaResponsavel} onChange={e => setVendaResponsavel(e.target.value)} placeholder="Ex: Gestor Central" className="bg-white" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label>Observações da Venda</Label>
+                                            <Input value={vendaObs} onChange={e => setVendaObs(e.target.value)} placeholder="Ex: Pago em PIX no dinheiro" className="bg-white" />
+                                        </div>
+                                    </div>
+
+                                    <Button type="submit" disabled={submittingVenda || !vendaProdId} className="w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold">
+                                        {submittingVenda ? 'Confirmando venda...' : 'Registrar Venda e Baixar Estoque'}
+                                    </Button>
+                                </form>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* ─── ABA DEVOLUÇÃO ─── */}
+                    {subTab === 'devolucao' && (
+                        <Card className="bg-white border-slate-200 shadow-sm max-w-xl mx-auto">
+                            <CardHeader>
+                                <CardTitle className="text-slate-900 flex items-center gap-2">
+                                    <Undo2 className="text-pink-600 w-5 h-5" />
+                                    Registrar Devolução de Consignação
+                                </CardTitle>
+                                <CardDescription>Insere peças de volta no estoque central a partir de uma consignação aberta com uma vendedora.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <form onSubmit={handleRegisterDevolucao} className="space-y-4">
+                                    <div className="space-y-1">
+                                        <Label>Selecionar Consignação em Aberto *</Label>
+                                        <Select value={devolucaoConsId} onValueChange={v => { setDevolucaoConsId(v); setDevolucaoQuantidades({}) }}>
+                                            <SelectTrigger className="bg-white"><SelectValue placeholder="Selecione a consignação..." /></SelectTrigger>
+                                            <SelectContent>
+                                                {consignacoes.filter(c => c.status === 'aberta').map(c => (
+                                                    <SelectItem key={c.id} value={c.id}>
+                                                        {c.vendedora} · {c.produtoNome} (Criada em {new Date(c.createdAt).toLocaleDateString('pt-BR')})
+                                                    </SelectItem>
+                                                ))}
+                                                {consignacoes.filter(c => c.status === 'aberta').length === 0 && (
+                                                    <SelectItem disabled value="nenhuma">Nenhuma consignação aberta encontrada</SelectItem>
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {devolucaoConsId && (
+                                        <div className="border border-slate-200 rounded-lg p-3 bg-slate-50 space-y-2 animate-fadeIn">
+                                            <h4 className="font-bold text-xs uppercase text-slate-500">Lançar Peças Devolvidas</h4>
+                                            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                                                {consignacoes.find(c => c.id === devolucaoConsId)?.itens?.map((t: any) => (
+                                                    <div key={t.tamanho} className="bg-white px-3 py-1.5 rounded border border-slate-200 flex justify-between items-center shadow-sm text-xs">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-slate-800 uppercase">Tamanho {t.tamanho}</span>
+                                                            <span className="text-[10px] text-slate-400">Saldo com ela: {t.quantidade} unidades</span>
+                                                        </div>
+                                                        <Input type="number" min="0" max={t.quantidade} value={devolucaoQuantidades[t.tamanho] || ''} onChange={e => {
+                                                            const val = Math.max(0, parseInt(e.target.value) || 0)
+                                                            if (val > t.quantidade) {
+                                                                alert(`A quantidade devolvida não pode exceder o saldo com ela (${t.quantidade}).`)
+                                                                return
+                                                            }
+                                                            setDevolucaoQuantidades({
+                                                                ...devolucaoQuantidades,
+                                                                [t.tamanho]: val
+                                                            })
+                                                        }} className="text-center h-8 font-semibold w-16" placeholder="0" />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-1">
+                                        <Label>Responsável pelo Recebimento</Label>
+                                        <Input value={devolucaoResponsavel} onChange={e => setDevolucaoResponsavel(e.target.value)} placeholder="Ex: Gestor Central" className="bg-white" />
+                                    </div>
+
+                                    <Button type="submit" disabled={submittingDevolucao || !devolucaoConsId} className="w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold">
+                                        {submittingDevolucao ? 'Registrando devolução...' : 'Confirmar Devolução e Somar no Central'}
+                                    </Button>
+                                </form>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* ─── ABA EXTRATO E RELATÓRIO ─── */}
+                    {subTab === 'extrato' && (
+                        <div className="space-y-6">
+                            {/* Consolidação do estoque atual */}
+                            <Card className="bg-white border-slate-200 shadow-sm">
+                                <CardHeader>
+                                    <CardTitle className="text-slate-900 flex items-center gap-2">
+                                        <Package className="text-pink-600 w-5 h-5" />
+                                        Posição Consolidada do Estoque (Auditoria)
+                                    </CardTitle>
+                                    <CardDescription>Resumo dos saldos centrais e saldo total no momento.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm border-collapse text-left">
+                                            <thead>
+                                                <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-semibold uppercase text-xs">
+                                                    <th className="p-3">Produto</th>
+                                                    <th className="p-3">Cor</th>
+                                                    <th className="p-3 text-center">Preço</th>
+                                                    <th className="p-3">Saldos por Tamanho</th>
+                                                    <th className="p-3 text-center">Total Central</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {produtos.map(p => {
+                                                    const total = p.tamanhos?.reduce((acc: number, curr: any) => acc + curr.quantidade, 0) || 0
+                                                    return (
+                                                        <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                                                            <td className="p-3 font-semibold text-slate-800">{p.nome}</td>
+                                                            <td className="p-3 text-slate-600">{p.cor}</td>
+                                                            <td className="p-3 text-center text-slate-600">R$ {p.preco.toFixed(2)}</td>
+                                                            <td className="p-3">
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {p.tamanhos?.map((t: any) => (
+                                                                        <span key={t.tamanho} className={`px-2 py-0.5 rounded text-xs border font-medium ${t.quantidade === 0 ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                                                            {t.tamanho}: {t.quantidade}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-3 text-center font-bold text-pink-600 text-base">{total}</td>
+                                                        </tr>
+                                                    )
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Extrato / Log de Movimentações */}
+                            <Card className="bg-white border-slate-200 shadow-sm">
+                                <CardHeader>
+                                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                                        <div>
+                                            <CardTitle className="text-slate-900 flex items-center gap-2">
+                                                <History className="text-pink-600 w-5 h-5" />
+                                                Histórico de Movimentações
+                                            </CardTitle>
+                                            <CardDescription>Extrato detalhado de toda movimentação realizada.</CardDescription>
+                                        </div>
+                                        {/* Filtros */}
+                                        <div className="flex flex-wrap gap-2">
+                                            <div className="w-32">
+                                                <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+                                                    <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="Tipo" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="todos">Todos Tipos</SelectItem>
+                                                        <SelectItem value="entrada">Entrada</SelectItem>
+                                                        <SelectItem value="consignacao">Consignação</SelectItem>
+                                                        <SelectItem value="venda">Venda</SelectItem>
+                                                        <SelectItem value="devolucao">Devolução</SelectItem>
+                                                        <SelectItem value="ajuste">Ajuste</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="w-40">
+                                                <Select value={filtroProdId} onValueChange={setFiltroProdId}>
+                                                    <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="Produto" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="todos">Todos Produtos</SelectItem>
+                                                        {produtos.map(p => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <Input placeholder="Buscar Vendedora..." value={filtroVendedora} onChange={e => setFiltroVendedora(e.target.value)} className="w-36 h-9 text-xs bg-white" />
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm border-collapse text-left">
+                                            <thead>
+                                                <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-semibold uppercase text-xs">
+                                                    <th className="p-3">Data</th>
+                                                    <th className="p-3">Operação</th>
+                                                    <th className="p-3">Produto</th>
+                                                    <th className="p-3">Grade Movimentada</th>
+                                                    <th className="p-3">Origem/Vendedora</th>
+                                                    <th className="p-3">Responsável</th>
+                                                    <th className="p-3">Valor / Obs</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {movsFiltradas.map((mov, idx) => {
+                                                    // Badge cores
+                                                    let badgeClass = ''
+                                                    switch (mov.tipo) {
+                                                        case 'entrada': badgeClass = 'bg-green-50 text-green-600 border-green-200'; break
+                                                        case 'consignacao': badgeClass = 'bg-blue-50 text-blue-600 border-blue-200'; break
+                                                        case 'venda': badgeClass = 'bg-pink-50 text-pink-600 border-pink-200'; break
+                                                        case 'devolucao': badgeClass = 'bg-amber-50 text-amber-600 border-amber-200'; break
+                                                        default: badgeClass = 'bg-slate-100 text-slate-600 border-slate-300'
+                                                    }
+
+                                                    return (
+                                                        <tr key={mov.id || idx} className="hover:bg-slate-50 transition-colors text-xs">
+                                                            <td className="p-3 text-slate-500 whitespace-nowrap">
+                                                                {new Date(mov.data || mov.createdAt).toLocaleDateString('pt-BR')} {new Date(mov.data || mov.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                            </td>
+                                                            <td className="p-3">
+                                                                <span className={`px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider ${badgeClass}`}>
+                                                                    {mov.tipo}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-3 font-semibold text-slate-800">{mov.produtoNome}</td>
+                                                            <td className="p-3">
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {mov.itens?.map((i: any) => (
+                                                                        <span key={i.tamanho} className="bg-slate-50 text-slate-600 border border-slate-200 rounded px-1.5 py-0.2 font-medium">
+                                                                            {i.tamanho} ({i.quantidade > 0 ? `+${i.quantidade}` : i.quantidade})
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-3 text-slate-700">
+                                                                {mov.vendedora ? (
+                                                                    <span className="font-semibold text-pink-600">{mov.vendedora}</span>
+                                                                ) : (
+                                                                    <span className="text-slate-400 italic">{mov.origem || 'central'}</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="p-3 text-slate-500 whitespace-nowrap">{mov.responsavel || 'Gestor'}</td>
+                                                            <td className="p-3">
+                                                                {mov.tipo === 'venda' && mov.valorTotal !== undefined && (
+                                                                    <p className="font-bold text-green-600 mb-0.5">R$ {mov.valorTotal.toFixed(2)}</p>
+                                                                )}
+                                                                {mov.observacao && <p className="text-[10px] text-slate-400 italic leading-snug">{mov.observacao}</p>}
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                })}
+                                                {movsFiltradas.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan={7} className="p-6 text-center text-slate-400 italic">Nenhuma movimentação encontrada com os filtros selecionados.</td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    )
+}
+

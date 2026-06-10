@@ -724,3 +724,654 @@ export async function updateVolunteersOrder(orderedIds: string[]) {
         return { success: false, message: 'Erro ao atualizar ordem dos voluntários.' };
     }
 }
+
+// ==========================================
+// --- ACTIONS DA LOJINHA (ESTOQUE, VENDAS, CONSIGNAÇÕES) ---
+// ==========================================
+
+export async function getProdutos() {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+        const snapshot = await db.collection('produtos').orderBy('nome', 'asc').get();
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        })) as any[];
+    } catch (error) {
+        console.error('Error fetching products:', error);
+        return [];
+    }
+}
+
+export async function getProdutosAtivos() {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+        const snapshot = await db.collection('produtos')
+            .where('ativo', '==', true)
+            .orderBy('nome', 'asc')
+            .get();
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        })) as any[];
+    } catch (error) {
+        console.error('Error fetching active products:', error);
+        return [];
+    }
+}
+
+export async function criarProduto(formData: FormData) {
+    try {
+        const { getStorage } = await import('firebase-admin/storage');
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const app = await initAdmin();
+        const bucket = getStorage(app).bucket();
+        const db = getFirestore(app);
+
+        const nome = formData.get('nome') as string;
+        const cor = formData.get('cor') as string;
+        const descricao = formData.get('descricao') as string;
+        const preco = parseFloat(formData.get('preco') as string);
+        const ativo = formData.get('ativo') === 'true' || formData.get('ativo') === 'on';
+        const tamanhosJson = formData.get('tamanhos') as string;
+        const tamanhos = JSON.parse(tamanhosJson) as { tamanho: string; quantidade: number }[];
+        const foto = formData.get('foto') as File;
+
+        if (!nome) throw new Error('Nome é obrigatório');
+        if (isNaN(preco)) throw new Error('Preço é inválido');
+
+        let fotoUrl = '';
+        if (foto && foto.size > 0) {
+            const buffer = Buffer.from(await foto.arrayBuffer());
+            const safeName = slugify(nome) || `prod-${Date.now()}`;
+            const ext = (foto.name.split('.').pop() || 'png').toLowerCase();
+            const filename = `produtos/${safeName}-${Date.now()}.${ext}`;
+            const fileRef = bucket.file(filename);
+            await fileRef.save(buffer, { metadata: { contentType: foto.type } });
+            fotoUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+        }
+
+        const docRef = await db.collection('produtos').add({
+            nome,
+            cor,
+            descricao,
+            preco,
+            fotoUrl,
+            ativo,
+            tamanhos,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        });
+
+        // Registra a movimentação de entrada inicial para os tamanhos que começam com quantidade > 0
+        const itensComQuantidade = tamanhos.filter(t => t.quantidade > 0);
+        if (itensComQuantidade.length > 0) {
+            await db.collection('movimentacoes').add({
+                tipo: 'entrada',
+                produtoId: docRef.id,
+                produtoNome: nome,
+                itens: itensComQuantidade,
+                origem: 'central',
+                responsavel: formData.get('responsavel') as string || 'Admin',
+                observacao: 'Estoque inicial no cadastro do produto',
+                data: new Date().toISOString(),
+                createdAt: new Date().toISOString()
+            });
+        }
+
+        revalidatePath('/lojinha');
+        revalidatePath('/admin');
+        return { success: true, message: 'Produto criado com sucesso!', id: docRef.id };
+    } catch (error) {
+        console.error('Error creating product:', error);
+        return { success: false, message: error instanceof Error ? error.message : 'Erro ao criar produto.' };
+    }
+}
+
+export async function editarProduto(id: string, formData: FormData) {
+    try {
+        const { getStorage } = await import('firebase-admin/storage');
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const app = await initAdmin();
+        const db = getFirestore(app);
+
+        const nome = formData.get('nome') as string;
+        const cor = formData.get('cor') as string;
+        const descricao = formData.get('descricao') as string;
+        const preco = parseFloat(formData.get('preco') as string);
+        const ativo = formData.get('ativo') === 'true' || formData.get('ativo') === 'on';
+        const tamanhosJson = formData.get('tamanhos') as string;
+        const tamanhos = JSON.parse(tamanhosJson) as { tamanho: string; quantidade: number }[];
+        const foto = formData.get('foto') as File;
+
+        if (!nome) throw new Error('Nome é obrigatório');
+        if (isNaN(preco)) throw new Error('Preço é inválido');
+
+        const docRef = db.collection('produtos').doc(id);
+        const doc = await docRef.get();
+        if (!doc.exists) throw new Error('Produto não encontrado');
+        const currentData = doc.data()!;
+
+        const updateData: Record<string, any> = {
+            nome,
+            cor,
+            descricao,
+            preco,
+            ativo,
+            updatedAt: new Date().toISOString()
+        };
+
+        // Trata imagem nova se houver
+        if (foto && foto.size > 0) {
+            const bucket = getStorage(app).bucket();
+            // Deletar foto anterior
+            if (currentData.fotoUrl) {
+                try {
+                    const url = new URL(currentData.fotoUrl);
+                    const filePath = decodeURIComponent(url.pathname.replace(`/${bucket.name}/`, ''));
+                    await bucket.file(filePath).delete();
+                } catch { /* ignora */ }
+            }
+
+            const buffer = Buffer.from(await foto.arrayBuffer());
+            const safeName = slugify(nome) || `prod-${Date.now()}`;
+            const ext = (foto.name.split('.').pop() || 'png').toLowerCase();
+            const filename = `produtos/${safeName}-${Date.now()}.${ext}`;
+            await bucket.file(filename).save(buffer, { metadata: { contentType: foto.type } });
+            updateData.fotoUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+        }
+
+        const oldTamanhos = currentData.tamanhos as { tamanho: string; quantidade: number }[] || [];
+        const adjustments: { tamanho: string; quantidade: number }[] = [];
+
+        // Para cada tamanho no novo array, comparar com o antigo
+        tamanhos.forEach(newT => {
+            const oldT = oldTamanhos.find(t => t.tamanho === newT.tamanho);
+            const diff = newT.quantidade - (oldT ? oldT.quantidade : 0);
+            if (diff !== 0) {
+                adjustments.push({ tamanho: newT.tamanho, quantidade: diff });
+            }
+        });
+        // Para tamanhos que foram removidos
+        oldTamanhos.forEach(oldT => {
+            const newT = tamanhos.find(t => t.tamanho === oldT.tamanho);
+            if (!newT) {
+                adjustments.push({ tamanho: oldT.tamanho, quantidade: -oldT.quantidade });
+            }
+        });
+
+        updateData.tamanhos = tamanhos;
+
+        // Executamos a edição numa transação
+        await db.runTransaction(async (transaction) => {
+            transaction.update(docRef, updateData);
+
+            if (adjustments.length > 0) {
+                const movRef = db.collection('movimentacoes').doc();
+                transaction.set(movRef, {
+                    tipo: 'ajuste',
+                    produtoId: id,
+                    produtoNome: nome,
+                    itens: adjustments,
+                    origem: 'central',
+                    responsavel: formData.get('responsavel') as string || 'Admin',
+                    observacao: 'Ajuste automático via edição de grade do produto',
+                    data: new Date().toISOString(),
+                    createdAt: new Date().toISOString()
+                });
+            }
+        });
+
+        revalidatePath('/lojinha');
+        revalidatePath('/admin');
+        return { success: true, message: 'Produto atualizado com sucesso!' };
+    } catch (error) {
+        console.error('Error updating product:', error);
+        return { success: false, message: error instanceof Error ? error.message : 'Erro ao atualizar produto.' };
+    }
+}
+
+export async function darEntradaEstoque(
+    produtoId: string,
+    itens: { tamanho: string; quantidade: number }[],
+    responsavel?: string
+) {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+
+        const prodRef = db.collection('produtos').doc(produtoId);
+
+        await db.runTransaction(async (transaction) => {
+            const prodDoc = await transaction.get(prodRef);
+            if (!prodDoc.exists) throw new Error('Produto não encontrado');
+
+            const prodData = prodDoc.data()!;
+            const currentTamanhos = prodData.tamanhos as { tamanho: string; quantidade: number }[] || [];
+
+            const updatedTamanhos = currentTamanhos.map(t => {
+                const entrada = itens.find(item => item.tamanho === t.tamanho);
+                if (entrada) {
+                    return { ...t, quantidade: t.quantidade + entrada.quantidade };
+                }
+                return t;
+            });
+
+            itens.forEach(entrada => {
+                const existe = currentTamanhos.some(t => t.tamanho === entrada.tamanho);
+                if (!existe) {
+                    updatedTamanhos.push({ tamanho: entrada.tamanho, quantidade: entrada.quantidade });
+                }
+            });
+
+            transaction.update(prodRef, {
+                tamanhos: updatedTamanhos,
+                updatedAt: new Date().toISOString()
+            });
+
+            const movRef = db.collection('movimentacoes').doc();
+            transaction.set(movRef, {
+                tipo: 'entrada',
+                produtoId,
+                produtoNome: prodData.nome,
+                itens,
+                origem: 'central',
+                responsavel: responsavel || 'Admin',
+                observacao: 'Entrada de lote no estoque central',
+                data: new Date().toISOString(),
+                createdAt: new Date().toISOString()
+            });
+        });
+
+        revalidatePath('/lojinha');
+        revalidatePath('/admin');
+        return { success: true, message: 'Entrada de estoque registrada com sucesso!' };
+    } catch (error) {
+        console.error('Error in darEntradaEstoque:', error);
+        return { success: false, message: error instanceof Error ? error.message : 'Erro ao dar entrada no estoque.' };
+    }
+}
+
+export async function registrarConsignacao(
+    vendedora: string,
+    produtoId: string,
+    itens: { tamanho: string; quantidade: number }[],
+    obs?: string,
+    responsavel?: string
+) {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+
+        const itensNormalizados = itens.map(i => ({
+            tamanho: i.tamanho,
+            quantidade: i.quantidade ?? 0
+        })).filter(i => i.quantidade > 0);
+
+        if (!vendedora) throw new Error('Vendedora é obrigatória');
+        if (itensNormalizados.length === 0) throw new Error('Itens com quantidade maior que zero são necessários');
+
+        const prodRef = db.collection('produtos').doc(produtoId);
+        const consRef = db.collection('consignacoes').doc();
+
+        await db.runTransaction(async (transaction) => {
+            const prodDoc = await transaction.get(prodRef);
+            if (!prodDoc.exists) throw new Error('Produto não encontrado');
+
+            const prodData = prodDoc.data()!;
+            const currentTamanhos = prodData.tamanhos as { tamanho: string; quantidade: number }[] || [];
+
+            itensNormalizados.forEach(item => {
+                const prodTam = currentTamanhos.find(t => t.tamanho === item.tamanho);
+                if (!prodTam || prodTam.quantidade < item.quantidade) {
+                    throw new Error(`Saldo central insuficiente para o tamanho ${item.tamanho}. Disponível: ${prodTam ? prodTam.quantidade : 0}, solicitado: ${item.quantidade}`);
+                }
+            });
+
+            const updatedTamanhos = currentTamanhos.map(t => {
+                const item = itensNormalizados.find(i => i.tamanho === t.tamanho);
+                if (item) {
+                    return { ...t, quantidade: t.quantidade - item.quantidade };
+                }
+                return t;
+            });
+
+            transaction.update(prodRef, {
+                tamanhos: updatedTamanhos,
+                updatedAt: new Date().toISOString()
+            });
+
+            transaction.set(consRef, {
+                vendedora,
+                produtoId,
+                produtoNome: prodData.nome,
+                itens: itensNormalizados,
+                itensLevados: itensNormalizados,
+                status: 'aberta',
+                observacao: obs || '',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            });
+
+            const movRef = db.collection('movimentacoes').doc();
+            transaction.set(movRef, {
+                tipo: 'consignacao',
+                produtoId,
+                produtoNome: prodData.nome,
+                itens: itensNormalizados,
+                origem: 'central',
+                vendedora,
+                responsavel: responsavel || 'Admin',
+                observacao: obs || `Consignado para ${vendedora}`,
+                data: new Date().toISOString(),
+                createdAt: new Date().toISOString()
+            });
+        });
+
+        revalidatePath('/lojinha');
+        revalidatePath('/admin');
+        return { success: true, message: 'Consignação registrada com sucesso!' };
+    } catch (error) {
+        console.error('Error in registrarConsignacao:', error);
+        return { success: false, message: error instanceof Error ? error.message : 'Erro ao registrar consignação.' };
+    }
+}
+
+export async function registrarVenda(dados: {
+    produtoId: string;
+    itens: { tamanho: string; quantidade: number }[];
+    origem: 'central' | 'consignado';
+    consignacaoId?: string;
+    vendedora?: string;
+    valorTotal: number;
+    responsavel?: string;
+    observacao?: string;
+}) {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+
+        const { produtoId, itens, origem, consignacaoId, vendedora, valorTotal, responsavel, observacao } = dados;
+
+        const prodRef = db.collection('produtos').doc(produtoId);
+        const consRef = consignacaoId ? db.collection('consignacoes').doc(consignacaoId) : null;
+
+        await db.runTransaction(async (transaction) => {
+            const prodDoc = await transaction.get(prodRef);
+            if (!prodDoc.exists) throw new Error('Produto não encontrado');
+            const prodData = prodDoc.data()!;
+
+            if (origem === 'central') {
+                const currentTamanhos = prodData.tamanhos as { tamanho: string; quantidade: number }[] || [];
+
+                itens.forEach(item => {
+                    const prodTam = currentTamanhos.find(t => t.tamanho === item.tamanho);
+                    if (!prodTam || prodTam.quantidade < item.quantidade) {
+                        throw new Error(`Saldo central insuficiente para o tamanho ${item.tamanho}. Disponível: ${prodTam ? prodTam.quantidade : 0}, solicitado: ${item.quantidade}`);
+                    }
+                });
+
+                const updatedTamanhos = currentTamanhos.map(t => {
+                    const item = itens.find(i => i.tamanho === t.tamanho);
+                    if (item) {
+                        return { ...t, quantidade: t.quantidade - item.quantidade };
+                    }
+                    return t;
+                });
+
+                transaction.update(prodRef, {
+                    tamanhos: updatedTamanhos,
+                    updatedAt: new Date().toISOString()
+                });
+            } else if (origem === 'consignado') {
+                if (!consRef) throw new Error('ID da consignação é necessário para vendas de consignado');
+                const consDoc = await transaction.get(consRef);
+                if (!consDoc.exists) throw new Error('Consignação não encontrada');
+
+                const consData = consDoc.data()!;
+                if (consData.status !== 'aberta') throw new Error('Consignação já foi devolvida ou encerrada');
+
+                const consItens = consData.itens as { tamanho: string; quantidade: number }[] || [];
+
+                itens.forEach(item => {
+                    const consTam = consItens.find(t => t.tamanho === item.tamanho);
+                    if (!consTam || consTam.quantidade < item.quantidade) {
+                        throw new Error(`Saldo consignado de ${consData.vendedora} insuficiente para o tamanho ${item.tamanho}. Disponível: ${consTam ? consTam.quantidade : 0}, solicitado: ${item.quantidade}`);
+                    }
+                });
+
+                const updatedConsItens = consItens.map(t => {
+                    const item = itens.find(i => i.tamanho === t.tamanho);
+                    if (item) {
+                        return { ...t, quantidade: t.quantidade - item.quantidade };
+                    }
+                    return t;
+                });
+
+                const totalRestante = updatedConsItens.reduce((acc, curr) => acc + curr.quantidade, 0);
+                const status = totalRestante === 0 ? 'devolvida' : 'aberta';
+
+                transaction.update(consRef, {
+                    itens: updatedConsItens,
+                    status,
+                    updatedAt: new Date().toISOString()
+                });
+            }
+
+            const movRef = db.collection('movimentacoes').doc();
+            transaction.set(movRef, {
+                tipo: 'venda',
+                produtoId,
+                produtoNome: prodData.nome,
+                itens,
+                origem,
+                consignacaoId: consignacaoId || null,
+                vendedora: vendedora || (origem === 'central' ? 'site' : 'Desconhecida'),
+                valorTotal,
+                responsavel: responsavel || 'Admin',
+                observacao: observacao || `Venda realizada a partir do estoque ${origem}`,
+                data: new Date().toISOString(),
+                createdAt: new Date().toISOString()
+            });
+        });
+
+        revalidatePath('/lojinha');
+        revalidatePath('/admin');
+        return { success: true, message: 'Venda registrada com sucesso!' };
+    } catch (error) {
+        console.error('Error in registrarVenda:', error);
+        return { success: false, message: error instanceof Error ? error.message : 'Erro ao registrar venda.' };
+    }
+}
+
+export async function registrarDevolucao(
+    consignacaoId: string,
+    itens: { tamanho: string; quantidade: number }[],
+    responsavel?: string
+) {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+
+        const consRef = db.collection('consignacoes').doc(consignacaoId);
+
+        await db.runTransaction(async (transaction) => {
+            const consDoc = await transaction.get(consRef);
+            if (!consDoc.exists) throw new Error('Consignação não encontrada');
+
+            const consData = consDoc.data()!;
+            if (consData.status !== 'aberta') throw new Error('Esta consignação já foi encerrada');
+
+            const consItens = consData.itens as { tamanho: string; quantidade: number }[] || [];
+            const prodId = consData.produtoId;
+            const prodRef = db.collection('produtos').doc(prodId);
+
+            const prodDoc = await transaction.get(prodRef);
+            if (!prodDoc.exists) throw new Error('Produto não encontrado');
+            const prodData = prodDoc.data()!;
+            const currentProdTamanhos = prodData.tamanhos as { tamanho: string; quantidade: number }[] || [];
+
+            itens.forEach(item => {
+                const consTam = consItens.find(t => t.tamanho === item.tamanho);
+                if (!consTam || consTam.quantidade < item.quantidade) {
+                    throw new Error(`A quantidade devolvida do tamanho ${item.tamanho} (${item.quantidade}) excede o saldo com a vendedora (${consTam ? consTam.quantidade : 0})`);
+                }
+            });
+
+            const updatedConsItens = consItens.map(t => {
+                const dev = itens.find(i => i.tamanho === t.tamanho);
+                if (dev) {
+                    return { ...t, quantidade: t.quantidade - dev.quantidade };
+                }
+                return t;
+            });
+
+            const totalRestante = updatedConsItens.reduce((acc, curr) => acc + curr.quantidade, 0);
+            const status = totalRestante === 0 ? 'devolvida' : 'aberta';
+
+            transaction.update(consRef, {
+                itens: updatedConsItens,
+                status,
+                updatedAt: new Date().toISOString()
+            });
+
+            const updatedProdTamanhos = currentProdTamanhos.map(t => {
+                const dev = itens.find(i => i.tamanho === t.tamanho);
+                if (dev) {
+                    return { ...t, quantidade: t.quantidade + dev.quantidade };
+                }
+                return t;
+            });
+
+            itens.forEach(dev => {
+                const existe = currentProdTamanhos.some(t => t.tamanho === dev.tamanho);
+                if (!existe) {
+                    updatedProdTamanhos.push({ tamanho: dev.tamanho, quantidade: dev.quantidade });
+                }
+            });
+
+            transaction.update(prodRef, {
+                tamanhos: updatedProdTamanhos,
+                updatedAt: new Date().toISOString()
+            });
+
+            const movRef = db.collection('movimentacoes').doc();
+            transaction.set(movRef, {
+                tipo: 'devolucao',
+                produtoId: prodId,
+                produtoNome: prodData.nome,
+                itens,
+                origem: 'consignado',
+                consignacaoId,
+                vendedora: consData.vendedora,
+                responsavel: responsavel || 'Admin',
+                observacao: `Devolvido ao estoque central por ${consData.vendedora}`,
+                data: new Date().toISOString(),
+                createdAt: new Date().toISOString()
+            });
+        });
+
+        revalidatePath('/lojinha');
+        revalidatePath('/admin');
+        return { success: true, message: 'Devolução registrada com sucesso!' };
+    } catch (error) {
+        console.error('Error in registrarDevolucao:', error);
+        return { success: false, message: error instanceof Error ? error.message : 'Erro ao registrar devolução.' };
+    }
+}
+
+export async function ajusteManual(
+    produtoId: string,
+    itens: { tamanho: string; quantidade: number }[],
+    motivo: string,
+    responsavel: string
+) {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+
+        const prodRef = db.collection('produtos').doc(produtoId);
+
+        await db.runTransaction(async (transaction) => {
+            const prodDoc = await transaction.get(prodRef);
+            if (!prodDoc.exists) throw new Error('Produto não encontrado');
+
+            const prodData = prodDoc.data()!;
+            const currentTamanhos = prodData.tamanhos as { tamanho: string; quantidade: number }[] || [];
+
+            itens.forEach(item => {
+                const prodTam = currentTamanhos.find(t => t.tamanho === item.tamanho);
+                const atual = prodTam ? prodTam.quantidade : 0;
+                if (atual + item.quantidade < 0) {
+                    throw new Error(`O ajuste de ${item.quantidade} no tamanho ${item.tamanho} deixará o estoque negativo (Estoque atual: ${atual})`);
+                }
+            });
+
+            const updatedTamanhos = currentTamanhos.map(t => {
+                const adj = itens.find(i => i.tamanho === t.tamanho);
+                if (adj) {
+                    return { ...t, quantidade: t.quantidade + adj.quantidade };
+                }
+                return t;
+            });
+
+            transaction.update(prodRef, {
+                tamanhos: updatedTamanhos,
+                updatedAt: new Date().toISOString()
+            });
+
+            const movRef = db.collection('movimentacoes').doc();
+            transaction.set(movRef, {
+                tipo: 'ajuste',
+                produtoId,
+                produtoNome: prodData.nome,
+                itens,
+                origem: 'central',
+                responsavel,
+                observacao: motivo || 'Ajuste manual de inventário',
+                data: new Date().toISOString(),
+                createdAt: new Date().toISOString()
+            });
+        });
+
+        revalidatePath('/lojinha');
+        revalidatePath('/admin');
+        return { success: true, message: 'Ajuste manual registrado com sucesso!' };
+    } catch (error) {
+        console.error('Error in ajusteManual:', error);
+        return { success: false, message: error instanceof Error ? error.message : 'Erro ao registrar ajuste.' };
+    }
+}
+
+export async function getConsignacoes() {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+        const snapshot = await db.collection('consignacoes').orderBy('createdAt', 'desc').get();
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        })) as any[];
+    } catch (error) {
+        console.error('Error fetching consignments:', error);
+        return [];
+    }
+}
+
+export async function getMovimentacoes() {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+        const snapshot = await db.collection('movimentacoes').orderBy('data', 'desc').get();
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        })) as any[];
+    } catch (error) {
+        console.error('Error fetching movements:', error);
+        return [];
+    }
+}
+
