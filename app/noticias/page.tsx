@@ -55,7 +55,8 @@ export default async function NoticiasPage() {
                                                     src={noticia.imagem}
                                                     alt={noticia.titulo ?? ''}
                                                     fill
-                                                    className="object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                                                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                                    style={{ objectPosition: noticia.focalPointY !== undefined ? `50% ${noticia.focalPointY}%` : 'center' }}
                                                 />
                                             ) : (
                                                 <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">

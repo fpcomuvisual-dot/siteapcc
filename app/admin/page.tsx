@@ -36,6 +36,8 @@ export default function AdminDashboard() {
     const [galleryPreviews, setGalleryPreviews] = useState<string[]>([])
     const [publishingError, setPublishingError] = useState<string | null>(null)
     const [publishingSuccess, setPublishingSuccess] = useState<string | null>(null)
+    const [coverPreviewSrc, setCoverPreviewSrc] = useState<string | null>(null)
+    const [focalPointY, setFocalPointY] = useState(50)
 
     useEffect(() => {
         getAllNewsItems().then(n => setNewsCount((n as any[]).length))
@@ -160,6 +162,7 @@ export default function AdminDashboard() {
 
                                         try {
                                             const formData = new FormData(e.currentTarget)
+                                            formData.set('focalPointY', String(focalPointY))
                                             
                                             // Compress cover image
                                             const coverInput = e.currentTarget.querySelector('input[name="image"]') as HTMLInputElement
@@ -192,10 +195,8 @@ export default function AdminDashboard() {
                                                     (e.target as HTMLFormElement).reset()
                                                     setGalleryFiles([])
                                                     setGalleryPreviews([])
-                                                    const preview = document.getElementById('preview-image')
-                                                    if (preview) preview.setAttribute('src', '')
-                                                    document.getElementById('upload-placeholder')?.classList.remove('hidden')
-                                                    document.getElementById('preview-container')?.classList.add('hidden')
+                                                    setCoverPreviewSrc(null)
+                                                    setFocalPointY(50)
                                                     getAllNewsItems().then(n => setNewsCount((n as any[]).length))
                                                     setPublishingSuccess(null)
                                                 }, 2000)
@@ -249,10 +250,9 @@ export default function AdminDashboard() {
                                                 <Label className="text-slate-700">Data de Publicação</Label>
                                                 <Input name="date" required type="date" className="bg-white border-slate-200" />
                                             </div>
-                                        </div>
-                                        <div className="space-y-2">
+                                             <div className="space-y-2">
                                             <Label className="text-slate-700">Foto de Capa <span className="text-red-500">*</span></Label>
-                                            <div className="border-2 border-dashed border-slate-200 rounded-lg h-full min-h-[200px] flex flex-col items-center justify-center p-4 relative group hover:border-purple-400 transition-colors bg-slate-50">
+                                            <div className="border-2 border-dashed border-slate-200 rounded-lg min-h-[200px] flex flex-col items-center justify-center p-4 relative group hover:border-purple-400 transition-colors bg-slate-50 overflow-hidden">
                                                 <input
                                                     type="file" name="image" accept="image/*" required
                                                     className="absolute inset-0 opacity-0 cursor-pointer z-10"
@@ -260,29 +260,54 @@ export default function AdminDashboard() {
                                                         const file = e.target.files?.[0]
                                                         if (file) {
                                                             const reader = new FileReader()
-                                                            reader.onload = (e) => {
-                                                                const img = document.getElementById('preview-image') as HTMLImageElement
-                                                                if (img && e.target?.result) img.src = e.target.result as string
+                                                            reader.onload = (ev) => {
+                                                                if (ev.target?.result) setCoverPreviewSrc(ev.target.result as string)
                                                             }
                                                             reader.readAsDataURL(file)
-                                                            document.getElementById('upload-placeholder')?.classList.add('hidden')
-                                                            document.getElementById('preview-container')?.classList.remove('hidden')
                                                         }
                                                     }}
                                                 />
-                                                <div id="upload-placeholder" className="text-center space-y-2">
-                                                    <div className="w-12 h-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mx-auto">
-                                                        <Upload className="w-6 h-6" />
+                                                {!coverPreviewSrc ? (
+                                                    <div className="text-center space-y-2">
+                                                        <div className="w-12 h-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mx-auto">
+                                                            <Upload className="w-6 h-6" />
+                                                        </div>
+                                                        <p className="text-sm font-medium text-slate-600">Clique para enviar foto</p>
+                                                        <p className="text-xs text-slate-400">JPG, PNG (Max 5MB)</p>
                                                     </div>
-                                                    <p className="text-sm font-medium text-slate-600">Clique para enviar foto</p>
-                                                    <p className="text-xs text-slate-400">JPG, PNG (Max 5MB)</p>
-                                                </div>
-                                                <div id="preview-container" className="hidden absolute inset-0 w-full h-full p-2">
-                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                    <img id="preview-image" src="" alt="Preview" className="w-full h-full object-cover rounded-md" />
-                                                </div>
+                                                ) : (
+                                                    <div className="absolute inset-0 w-full h-full p-2">
+                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                        <img
+                                                            src={coverPreviewSrc}
+                                                            alt="Preview"
+                                                            className="w-full h-full object-cover rounded-md"
+                                                            style={{ objectPosition: `50% ${focalPointY}%` }}
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
-                                        </div>
+                                            {coverPreviewSrc && (
+                                                <div className="pt-2 space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                                    <div className="flex justify-between text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                                                        <span>Corte: Topo</span>
+                                                        <span>Centro</span>
+                                                        <span>Base</span>
+                                                    </div>
+                                                    <input
+                                                        type="range"
+                                                        min="0"
+                                                        max="100"
+                                                        value={focalPointY}
+                                                        onChange={(e) => setFocalPointY(Number(e.target.value))}
+                                                        className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-row-resize accent-purple-600"
+                                                    />
+                                                    <p className="text-xs text-slate-500 text-center font-medium">
+                                                        Ajuste o enquadramento vertical da imagem para o card.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>                                    </div>
                                     </div>
                                     <div className="space-y-4">
                                         <div className="grid gap-2">

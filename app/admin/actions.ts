@@ -31,6 +31,7 @@ function normalizeNewsDoc(id: string, d: Record<string, any>) {
         galeria: Array.isArray(d.galeria)
             ? d.galeria.filter((item: any) => typeof item === 'string')
             : [],
+        focalPointY: d.focalPointY !== undefined ? Number(d.focalPointY) : 50,
         createdAt: d.createdAt ?? '',
         // campos extras do WordPress (preservados se existirem)
         ...(d.wpId !== undefined && { wpId: d.wpId }),
@@ -65,6 +66,8 @@ export async function createNewsItem(formData: FormData) {
         const date = formData.get('date') as string;
         const content = formData.get('content') as string;
         const image = formData.get('image') as File;
+        const focalPointYStr = formData.get('focalPointY') as string;
+        const focalPointY = focalPointYStr !== null ? parseInt(focalPointYStr, 10) : 50;
         const galleryFiles = formData.getAll('galeria')
             .filter((item): item is File => item instanceof File && item.size > 0);
 
@@ -110,6 +113,7 @@ export async function createNewsItem(formData: FormData) {
             conteudo: content,
             imagem: publicUrl,
             galeria: galleryUrls,
+            focalPointY,
             createdAt: new Date().toISOString()
         });
 
