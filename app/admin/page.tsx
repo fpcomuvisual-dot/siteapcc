@@ -7,12 +7,13 @@ import {
     getAllNewsItems, saveHeroSettings, getHeroSettings,
     savePopupSettings, getPopupSettings,
     getVolunteers, createVolunteer, updateVolunteer, deleteVolunteer,
+    updateVolunteersOrder,
 } from './actions'
 import { TRANSPARENCY_CATEGORIES } from '@/lib/constants'
 import {
     BarChart3, FileText, TrendingUp, Upload, Bot, CheckCircle2,
     LayoutDashboard, Settings, Sparkles, Menu, Calendar, Trash2, Plus, Shield,
-    Image as ImageIcon, Megaphone, Eye, EyeOff, Users, Pencil,
+    Image as ImageIcon, Megaphone, Eye, EyeOff, Users, Pencil, GripVertical,
 } from 'lucide-react'
 import { createCalendarEvent, getCalendarEvents, deleteCalendarEvent } from './actions'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -962,6 +963,46 @@ function VoluntariosManager() {
     const [editNome, setEditNome] = useState('')
     const [editRole, setEditRole] = useState('')
     const [previewUrl, setPreviewUrl] = useState('')
+    const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+    const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+
+    const handleDragStart = (e: React.DragEvent, index: number) => {
+        setDraggedIndex(index)
+        e.dataTransfer.effectAllowed = 'move'
+    }
+
+    const handleDragEnd = () => {
+        setDraggedIndex(null)
+        setDragOverIndex(null)
+    }
+
+    const handleDragOver = (e: React.DragEvent, index: number) => {
+        e.preventDefault()
+        if (draggedIndex === null || draggedIndex === index) return
+        setDragOverIndex(index)
+    }
+
+    const handleDrop = async (e: React.DragEvent, targetIndex: number) => {
+        e.preventDefault()
+        if (draggedIndex === null || draggedIndex === targetIndex) return
+
+        const reordered = [...volunteers]
+        const [movedItem] = reordered.splice(draggedIndex, 1)
+        reordered.splice(targetIndex, 0, movedItem)
+
+        setVolunteers(reordered)
+        setDraggedIndex(null)
+        setDragOverIndex(null)
+
+        setSubmitting(true)
+        const orderedIds = reordered.map(v => v.id)
+        const result = await updateVolunteersOrder(orderedIds)
+        if (!result.success) {
+            alert(result.message)
+            await loadVolunteers()
+        }
+        setSubmitting(false)
+    }
 
     async function loadVolunteers() {
         const data = await getVolunteers()
@@ -1106,8 +1147,29 @@ function VoluntariosManager() {
                         <p className="text-sm text-slate-400 italic">Nenhum voluntário cadastrado ainda. Adicione acima ou execute a migração.</p>
                     ) : (
                         <div className="grid gap-3">
-                            {volunteers.map((vol: any) => (
-                                <div key={vol.id} className="flex items-center gap-4 p-3 border border-slate-200 rounded-lg hover:border-pink-300 transition-colors">
+                            {volunteers.map((vol: any, index: number) => (
+                                <div
+                                    key={vol.id}
+                                    draggable={editingId === null}
+                                    onDragStart={(e) => handleDragStart(e, index)}
+                                    onDragOver={(e) => handleDragOver(e, index)}
+                                    onDragEnd={handleDragEnd}
+                                    onDrop={(e) => handleDrop(e, index)}
+                                    className={`flex items-center gap-4 p-3 border rounded-lg transition-all select-none ${
+                                        draggedIndex === index
+                                            ? 'border-dashed border-pink-400 bg-pink-50/20 opacity-50 cursor-grabbing'
+                                            : dragOverIndex === index
+                                            ? 'border-pink-500 bg-pink-50/50 scale-[1.01] cursor-grabbing'
+                                            : 'border-slate-200 bg-white hover:border-pink-300 cursor-grab'
+                                    }`}
+                                >
+                                    {/* Drag Handle */}
+                                    {editingId === null && (
+                                        <div className="text-slate-400 cursor-grab active:cursor-grabbing shrink-0">
+                                            <GripVertical className="w-4 h-4" />
+                                        </div>
+                                    )}
+
                                     {/* Foto */}
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img

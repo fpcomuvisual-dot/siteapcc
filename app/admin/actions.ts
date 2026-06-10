@@ -699,3 +699,24 @@ export async function deleteVolunteer(id: string) {
         return { success: false, message: 'Erro ao remover voluntário(a).' };
     }
 }
+
+export async function updateVolunteersOrder(orderedIds: string[]) {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore(await initAdmin());
+
+        const batch = db.batch();
+        orderedIds.forEach((id, index) => {
+            const ref = db.collection('volunteers').doc(id);
+            batch.update(ref, { ordem: index + 1 });
+        });
+        await batch.commit();
+
+        revalidatePath('/sobre');
+        revalidatePath('/admin');
+        return { success: true, message: 'Ordem dos voluntários atualizada com sucesso!' };
+    } catch (error) {
+        console.error('Error updating volunteers order:', error);
+        return { success: false, message: 'Erro ao atualizar ordem dos voluntários.' };
+    }
+}
