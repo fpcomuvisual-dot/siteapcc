@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Syne, Outfit } from "next/font/google";
 import { 
     Shirt, ShoppingBag, Copy, Check, 
@@ -75,6 +75,14 @@ export default function PreVenda({ settings, produtos }: { settings: any, produt
     
     // Corousel de imagens da prevenda
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    useEffect(() => {
+        if (!settings.imagens || settings.imagens.length <= 1) return;
+        const interval = setInterval(() => {
+            setCurrentImageIndex((prev) => (prev + 1) % settings.imagens.length);
+        }, 4000);
+        return () => clearInterval(interval);
+    }, [settings.imagens]);
 
     const currentProduct = produtos.find(
         (p) => p.cor?.toLowerCase() === selectedColor.toLowerCase()
@@ -161,7 +169,7 @@ export default function PreVenda({ settings, produtos }: { settings: any, produt
                                         {settings.imagens.length > 1 && (
                                             <div className="absolute bottom-4 left-0 w-full flex justify-center gap-2">
                                                 {settings.imagens.map((_: any, idx: number) => (
-                                                    <button key={idx} onClick={() => setCurrentImageIndex(idx)} className={`w-2 h-2 rounded-full transition-all ${idx === currentImageIndex ? 'bg-white w-4' : 'bg-white/50'}`} />
+                                                    <button key={idx} type="button" onClick={() => setCurrentImageIndex(idx)} className={`w-2 h-2 rounded-full transition-all ${idx === currentImageIndex ? 'bg-white w-4' : 'bg-white/50'}`} />
                                                 ))}
                                             </div>
                                         )}
