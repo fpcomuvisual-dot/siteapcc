@@ -512,7 +512,7 @@ export async function getCalendarEvents(year?: number, month?: number) {
         const { getFirestore } = await import('firebase-admin/firestore');
         const db = getFirestore(await initAdmin());
 
-        let query = db.collection('calendar_events').orderBy('sortDate', 'asc');
+        let query: any = db.collection('calendar_events');
 
         if (year) {
             query = query.where('year', '==', year);
@@ -523,10 +523,14 @@ export async function getCalendarEvents(year?: number, month?: number) {
 
         const snapshot = await query.get();
 
-        return snapshot.docs.map(doc => ({
+        const eventos = snapshot.docs.map((doc: any) => ({
             id: doc.id,
             ...doc.data()
         }));
+
+        eventos.sort((a: any, b: any) => (a.sortDate || '').localeCompare(b.sortDate || ''));
+
+        return eventos;
     } catch (error) {
         console.error('Error fetching calendar events:', error);
         return [];
@@ -750,12 +754,13 @@ export async function getProdutosAtivos() {
         const db = getFirestore(await initAdmin());
         const snapshot = await db.collection('produtos')
             .where('ativo', '==', true)
-            .orderBy('nome', 'asc')
             .get();
-        return snapshot.docs.map(doc => ({
+        const produtos = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
         })) as any[];
+        produtos.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        return produtos;
     } catch (error) {
         console.error('Error fetching active products:', error);
         return [];
