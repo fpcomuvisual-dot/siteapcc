@@ -12,7 +12,8 @@ import {
     // Lojinha Actions:
     getProdutos, criarProduto, editarProduto, darEntradaEstoque,
     registrarConsignacao, registrarVenda, registrarDevolucao,
-    ajusteManual, getConsignacoes, getMovimentacoes
+    ajusteManual, getConsignacoes, getMovimentacoes,
+    getPreVendaSettings, savePreVendaSettings
 } from './actions'
 import { TRANSPARENCY_CATEGORIES } from '@/lib/constants'
 import {
@@ -88,6 +89,7 @@ export default function AdminDashboard() {
                     <SidebarItem icon={Calendar} label="Calendário" active={activeSection === 'calendario'} onClick={() => setActiveSection('calendario')} />
                     <SidebarItem icon={Users} label="Voluntários" active={activeSection === 'voluntarios'} onClick={() => setActiveSection('voluntarios')} />
                     <SidebarItem icon={ShoppingBag} label="Lojinha APCC" active={activeSection === 'lojinha'} onClick={() => setActiveSection('lojinha')} />
+                    <SidebarItem icon={Tag} label="Pré-venda Lojinha" active={activeSection === 'prevenda'} onClick={() => setActiveSection('prevenda')} />
                     <SidebarItem icon={Sparkles} label="Personalização" active={activeSection === 'personalizacao'} onClick={() => setActiveSection('personalizacao')} />
                     <SidebarItem icon={Bot} label="Ferramentas IA" active={activeSection === 'ia'} onClick={() => setActiveSection('ia')} />
                     <SidebarItem icon={Settings} label="Configurações" />
@@ -116,6 +118,7 @@ export default function AdminDashboard() {
                                     <SelectItem value="calendario">Calendário</SelectItem>
                                     <SelectItem value="voluntarios">Voluntários</SelectItem>
                                     <SelectItem value="lojinha">Lojinha APCC</SelectItem>
+                                    <SelectItem value="prevenda">Pré-venda Lojinha</SelectItem>
                                     <SelectItem value="personalizacao">Personalização Visual</SelectItem>
                                     <SelectItem value="ia">Ferramentas IA (Demo)</SelectItem>
                                 </SelectContent>
@@ -431,6 +434,9 @@ export default function AdminDashboard() {
 
                     {/* LOJINHA */}
                     {activeSection === 'lojinha' && <LojinhaManager />}
+
+                    {/* PRÉ-VENDA */}
+                    {activeSection === 'prevenda' && <PreVendaManager />}
 
                     {/* IA — APENAS DEMONSTRAÇÃO */}
                     {activeSection === 'ia' && (
@@ -2680,3 +2686,186 @@ function LojinhaManager() {
     )
 }
 
+// ─── Gerenciador da Pré-Venda ───────────────────────────────────────────────
+function PreVendaManager() {
+    const [loading, setLoading] = useState(true)
+    const [ativo, setAtivo] = useState(false)
+    const [titulo, setTitulo] = useState('')
+    const [subtitulo, setSubtitulo] = useState('')
+    const [descricao, setDescricao] = useState('')
+    const [localRetirada, setLocalRetirada] = useState('')
+    const [dataRetirada, setDataRetirada] = useState('')
+    
+    // Imagens que já estavam no Firestore
+    const [imagensAtuais, setImagensAtuais] = useState<string[]>([])
+    
+    // Novas imagens selecionadas
+    const [novasImagens, setNovasImagens] = useState<File[]>([])
+    const [novasImagensPreview, setNovasImagensPreview] = useState<string[]>([])
+    
+    const [saving, setSaving] = useState(false)
+
+    useEffect(() => {
+        getPreVendaSettings().then((d: any) => {
+            setAtivo(d.ativo || false)
+            setTitulo(d.titulo || '')
+            setSubtitulo(d.subtitulo || '')
+            setDescricao(d.descricao || '')
+            setLocalRetirada(d.localRetirada || '')
+            setDataRetirada(d.dataRetirada || '')
+            setImagensAtuais(d.imagens || [])
+            setLoading(false)
+        })
+    }, [])
+
+    useEffect(() => {
+        const urls = novasImagens.map(file => URL.createObjectURL(file))
+        setNovasImagensPreview(urls)
+        return () => urls.forEach(URL.revokeObjectURL)
+    }, [novasImagens])
+
+    const handleRemoveImagemAtual = (index: number) => {
+        setImagensAtuais(prev => prev.filter((_, i) => i !== index))
+    }
+    const handleRemoveNovaImagem = (index: number) => {
+        setNovasImagens(prev => prev.filter((_, i) => i !== index))
+    }
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setSaving(true)
+        try {
+            const formData = new FormData()
+            formData.set('ativo', ativo ? 'on' : 'off')
+            formData.set('titulo', titulo)
+            formData.set('subtitulo', subtitulo)
+            formData.set('descricao', descricao)
+            formData.set('localRetirada', localRetirada)
+            formData.set('dataRetirada', dataRetirada)
+            formData.set('imagensAtuais', JSON.stringify(imagensAtuais))
+
+            for (const file of novasImagens) {
+                const compressed = await imageCompression(file, { maxSizeMB: 1, maxWidthOrHeight: 1600, useWebWorker: true })
+                formData.append('novasImagens', compressed, compressed.name)
+            }
+
+            const res = await savePreVendaSettings(formData)
+            if (res.success) {
+                alert('Pré-venda salva com sucesso!')
+                setNovasImagens([])
+                // Recarrega do servidor
+                const d = await getPreVendaSettings()
+                setImagensAtuais((d as any).imagens || [])
+            } else {
+                alert('Erro: ' + res.message)
+            }
+        } catch (err) {
+            console.error(err)
+            alert('Erro ao salvar as configurações.')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    if (loading) return <div className="p-8 text-center text-slate-500">Carregando configurações da Pré-venda...</div>
+
+    return (
+        <Card className="bg-white border-slate-200 shadow-sm">
+            <CardHeader>
+                <CardTitle className="text-slate-900 flex items-center gap-2">
+                    <Tag className="text-pink-600 w-5 h-5" /> Configurar Pré-venda da Lojinha
+                </CardTitle>
+                <CardDescription>
+                    Ative e configure uma campanha temporária de Pré-venda na URL da lojinha principal.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <form onSubmit={handleSave} className="space-y-6">
+                    <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <input
+                            type="checkbox"
+                            id="ativo"
+                            checked={ativo}
+                            onChange={(e) => setAtivo(e.target.checked)}
+                            className="w-5 h-5 text-pink-600 rounded focus:ring-pink-500 cursor-pointer"
+                        />
+                        <div className="flex flex-col">
+                            <label htmlFor="ativo" className="font-bold text-slate-800 cursor-pointer">Ativar Modo Pré-venda</label>
+                            <span className="text-xs text-slate-500">Se ativo, substitui a vitrine normal pela landing page promocional (mantendo os mesmos produtos).</span>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Título Principal</Label>
+                            <Input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex: Corrida Pela Vida 2026" required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Subtítulo (Eyebrow)</Label>
+                            <Input value={subtitulo} onChange={e => setSubtitulo(e.target.value)} placeholder="Ex: Bazar Beneficente" />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                            <Label>Descrição Curta</Label>
+                            <Textarea value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Texto explicativo para a landing page..." rows={3} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Local de Retirada</Label>
+                            <Input value={localRetirada} onChange={e => setLocalRetirada(e.target.value)} placeholder="Ex: Sede APCC - Centro" required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Data/Horário de Retirada</Label>
+                            <Input value={dataRetirada} onChange={e => setDataRetirada(e.target.value)} placeholder="Ex: Sábado, 18/07 das 9h às 12h" required />
+                        </div>
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t border-slate-100">
+                        <Label>Imagens da Campanha (Carousel)</Label>
+                        
+                        <div className="flex flex-wrap gap-4">
+                            {imagensAtuais.map((url, i) => (
+                                <div key={'atual-'+i} className="relative w-32 h-32 rounded-lg border border-slate-200 overflow-hidden group">
+                                    <img src={url} alt="Campanha" className="w-full h-full object-cover" />
+                                    <button type="button" onClick={() => handleRemoveImagemAtual(i)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                            {novasImagensPreview.map((url, i) => (
+                                <div key={'nova-'+i} className="relative w-32 h-32 rounded-lg border-2 border-green-200 overflow-hidden group opacity-80">
+                                    <img src={url} alt="Nova" className="w-full h-full object-cover" />
+                                    <button type="button" onClick={() => handleRemoveNovaImagem(i)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+
+                            <div className="relative w-32 h-32 rounded-lg border-2 border-dashed border-slate-300 hover:border-pink-400 bg-slate-50 flex flex-col items-center justify-center cursor-pointer overflow-hidden text-slate-500 hover:text-pink-600 transition-colors">
+                                <input 
+                                    type="file" 
+                                    multiple 
+                                    accept="image/*" 
+                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                    onChange={(e) => {
+                                        if (e.target.files) {
+                                            setNovasImagens(prev => [...prev, ...Array.from(e.target.files!)])
+                                        }
+                                        e.target.value = ''
+                                    }}
+                                />
+                                <Plus className="w-8 h-8 mb-1" />
+                                <span className="text-xs font-medium text-center px-2">Adicionar<br/>Fotos</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex justify-end">
+                        <Button type="submit" disabled={saving} className="bg-pink-600 hover:bg-pink-700 text-white gap-2">
+                            {saving ? <Sparkles className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                            {saving ? 'Salvando...' : 'Salvar Alterações'}
+                        </Button>
+                    </div>
+                </form>
+            </CardContent>
+        </Card>
+    )
+}

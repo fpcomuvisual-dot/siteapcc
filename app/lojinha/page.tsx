@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getProdutosAtivos } from "../admin/actions";
+import { getProdutosAtivos, getPreVendaSettings } from "../admin/actions";
+import PreVenda from "@/components/features/PreVenda";
 import { Syne, Outfit } from "next/font/google";
 import { 
     Shirt, ShoppingBag, ArrowLeft, Copy, Check, 
@@ -78,6 +79,7 @@ function gerarCodigoPix(valor: number, txid: string): string {
 export default function LojinhaPage() {
     const [produtos, setProdutos] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [preVendaSettings, setPreVendaSettings] = useState<any>(null);
     
     // Modelo selecionado (Rosa ou Azul)
     const [selectedColor, setSelectedColor] = useState<"Rosa" | "Azul">("Rosa");
@@ -97,14 +99,18 @@ export default function LojinhaPage() {
 
     useEffect(() => {
         let mounted = true;
-        getProdutosAtivos().then((data) => {
+        Promise.all([
+            getProdutosAtivos(),
+            getPreVendaSettings()
+        ]).then(([produtosData, preVendaData]) => {
             if (mounted) {
-                setProdutos(data || []);
+                setProdutos(produtosData || []);
+                setPreVendaSettings(preVendaData || null);
                 setLoading(false);
                 
                 // Seleciona por padrão o modelo da cor que estiver disponível
-                const temRosa = data?.some((p: any) => p.cor?.toLowerCase() === "rosa");
-                const temAzul = data?.some((p: any) => p.cor?.toLowerCase() === "azul");
+                const temRosa = produtosData?.some((p: any) => p.cor?.toLowerCase() === "rosa");
+                const temAzul = produtosData?.some((p: any) => p.cor?.toLowerCase() === "azul");
                 if (!temRosa && temAzul) {
                     setSelectedColor("Azul");
                 }
@@ -210,18 +216,30 @@ export default function LojinhaPage() {
     const activeTextClass = selectedColor === "Rosa" ? "text-pink-600" : "text-blue-600";
     const activeRingClass = selectedColor === "Rosa" ? "focus:ring-pink-500/20" : "focus:ring-blue-500/20";
 
+    if (loading) {
+        return (
+            <div className={`min-h-screen bg-slate-100/50 flex flex-col items-center justify-start ${outfit.variable} ${syne.variable} font-sans py-0 md:py-10`}>
+                <div className="w-full max-w-[480px] bg-white min-h-screen md:min-h-[850px] shadow-2xl md:rounded-3xl border border-slate-100 flex flex-col pb-16 overflow-hidden relative">
+                    <div className="flex-1 flex flex-col items-center justify-center py-20 text-slate-400 gap-4 px-6">
+                        <div className="w-12 h-12 rounded-full border-4 border-slate-100 border-t-pink-500 animate-spin" />
+                        <p className="text-sm font-semibold text-slate-500">Carregando bazar da lojinha...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (preVendaSettings?.ativo) {
+        return <PreVenda settings={preVendaSettings} produtos={produtos} />;
+    }
+
     return (
         <div className={`min-h-screen bg-slate-100/50 flex flex-col items-center justify-start ${outfit.variable} ${syne.variable} font-sans py-0 md:py-10`}>
             
             {/* Contêiner Mobile-First centralizado */}
             <div className="w-full max-w-[480px] bg-white min-h-screen md:min-h-[850px] shadow-2xl md:rounded-3xl border border-slate-100 flex flex-col pb-16 overflow-hidden relative">
                 
-                {loading ? (
-                    <div className="flex-1 flex flex-col items-center justify-center py-20 text-slate-400 gap-4 px-6">
-                        <div className="w-12 h-12 rounded-full border-4 border-slate-100 border-t-pink-500 animate-spin" />
-                        <p className="text-sm font-semibold text-slate-500">Carregando bazar da lojinha...</p>
-                    </div>
-                ) : !currentProduct && produtos.length === 0 ? (
+                {!currentProduct && produtos.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
                         <ShoppingBag className="w-16 h-16 text-slate-300 mb-4" />
                         <h3 className="font-extrabold text-slate-800 text-lg">Sem produtos ativos</h3>

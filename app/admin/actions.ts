@@ -421,6 +421,84 @@ export async function savePopupSettings(formData: FormData) {
     }
 }
 
+// --- PREVENDA SETTINGS ---
+
+export async function getPreVendaSettings() {
+    try {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db  = getFirestore(await initAdmin());
+        const doc = await db.collection('settings').doc('global').get();
+        const d   = (doc.data() || {}) as Record<string, unknown>;
+        return (d.preVenda as Record<string, unknown>) || { ativo: false, titulo: '', subtitulo: '', descricao: '', localRetirada: '', dataRetirada: '', imagens: [], versao: 1 };
+    } catch (error) {
+        console.error('Error fetching prevenda settings:', error);
+        return { ativo: false, titulo: '', subtitulo: '', descricao: '', localRetirada: '', dataRetirada: '', imagens: [], versao: 1 };
+    }
+}
+
+export async function savePreVendaSettings(formData: FormData) {
+    try {
+        const { getStorage } = await import('firebase-admin/storage');
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const app = await initAdmin();
+        const db  = getFirestore(app);
+
+        const docRef  = db.collection('settings').doc('global');
+        const current = ((await docRef.get()).data() || {}) as Record<string, unknown>;
+        const prev    = (current.preVenda as Record<string, unknown>) || {};
+
+        const ativo         = formData.get('ativo') === 'on';
+        const titulo        = (formData.get('titulo') as string) || '';
+        const subtitulo     = (formData.get('subtitulo') as string) || '';
+        const descricao     = (formData.get('descricao') as string) || '';
+        const localRetirada = (formData.get('localRetirada') as string) || '';
+        const dataRetirada  = (formData.get('dataRetirada') as string) || '';
+        
+        const imagensParaManterJson = formData.get('imagensAtuais') as string;
+        let imagensParaManter: string[] = [];
+        try {
+            if (imagensParaManterJson) {
+                imagensParaManter = JSON.parse(imagensParaManterJson);
+            }
+        } catch (e) {
+            console.error('Erro ao fazer parse de imagensAtuais', e);
+        }
+
+        const bucket = getStorage(app).bucket();
+        const novasImagens = formData.getAll('novasImagens').filter((item): item is File => item instanceof File && item.size > 0);
+        
+        const URLsNovasImagens: string[] = [];
+        for (let i = 0; i < novasImagens.length; i++) {
+            const imagem = novasImagens[i];
+            if (!imagem.type.startsWith('image/')) continue;
+            
+            const ext = (imagem.name.split('.').pop() || 'jpg').toLowerCase();
+            const safeName = imagem.name.replace(/[^a-zA-Z0-9.-]/g, '');
+            const filename = `prevenda/prevenda-${Date.now()}-${i}-${safeName}`;
+            
+            await bucket.file(filename).save(Buffer.from(await imagem.arrayBuffer()), { metadata: { contentType: imagem.type } });
+            URLsNovasImagens.push(`https://storage.googleapis.com/${bucket.name}/${filename}`);
+        }
+
+        const imagensFinal = [...imagensParaManter, ...URLsNovasImagens];
+
+        const preVenda: Record<string, unknown> = {
+            ...prev,
+            ativo, titulo, subtitulo, descricao, localRetirada, dataRetirada,
+            imagens: imagensFinal,
+            versao: ((prev.versao as number) || 0) + 1,
+        };
+
+        await docRef.set({ preVenda }, { merge: true });
+        revalidatePath('/');
+        revalidatePath('/lojinha');
+        return { success: true, message: 'Pré-venda atualizada com sucesso!' };
+    } catch (error) {
+        console.error('Error saving prevenda settings:', error);
+        return { success: false, message: error instanceof Error ? error.message : 'Erro ao salvar pré-venda.' };
+    }
+}
+
 export async function saveThemeSettings(formData: FormData) {
     try {
         const { getFirestore } = await import('firebase-admin/firestore');
